@@ -41,32 +41,10 @@ class SimState(object):
         self.tick += 1
 
 
-    # def tokenPrice(self, token:Token) -> float:
-    #     r0 = requests.get("https://min-api.cryptocompare.com/data/price?fsym=" + token.symbol + "&tsyms=USD")
-    #     return r0.json()['USD']
+    def tokenPrice(self, token:Token) -> float:
+        r0 = requests.get("https://min-api.cryptocompare.com/data/price?fsym=" + token.symbol + "&tsyms=USD")
+        return r0.json()['USD']
 
-    # #==============================================================
-    # def OCEANprice(self) -> float:
-    #     """Estimated price of $OCEAN token, in USD"""
-    #     price = valuation.OCEANprice(self.overallValuation(),
-    #                                  self.OCEANsupply())
-    #     assert price > 0.0
-    #     return price
-
-    # #==============================================================
-    # def overallValuation(self) -> float: #in USD
-    #     v = self.fundamentalsValuation() + \
-    #         self.speculationValuation()
-    #     assert v > 0.0
-    #     return v
-
-    # def fundamentalsValuation(self) -> float: #in USD
-    #     return self.kpis.valuationPS(30.0) #based on P/S=30                     #magic number
-
-    # def speculationValuation(self) -> float: #in USD
-    #     return self._speculation_valuation
-
-    # #==============================================================
 
 
 def funcOne():

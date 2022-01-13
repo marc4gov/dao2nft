@@ -1,6 +1,5 @@
-Dimensions to test
-We want to understand the interdependencies between a whitelisted and a grey pool to help demystify the gap between traditional finance and DeFi
-1)	How long the pools take for price alignment when an external price change occurred.
-2)	Comparison of slippage
-3)	Development of pool TVL
-4)	Trading volume development
+# cadCAD model
+
+Based on Loopy model
+
+(OceanDAO Loopy)[https://cdn.discordapp.com/attachments/912764649655640115/930436007847952394/Loopy_OceanDAO.gif]

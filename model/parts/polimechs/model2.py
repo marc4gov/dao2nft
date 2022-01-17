@@ -1,5 +1,12 @@
-import random
 import math
+import random
+
+import networkx as nx
+from parts.agents.util.sourcecred.contribution import (GithubEdgeWeight,
+                                                       GithubNodeWeight, Contribution)
+from parts.agents.util.sourcecred.contributor import make_contributor, add_contribution
+
+
 
 def grants_policy(params, step, sH, s):
     """
@@ -11,7 +18,7 @@ def grants_policy(params, step, sH, s):
 
     # adjust the grant CAP according to the amount of valuable projects in this round
     if (current_timestep % timestep_per_month) == 0:
-      value_ratio = (s['valuable_projects'] - s['unsound_projects']) / s['projects']
+      value_ratio = (len(s['valuable_projects']) - len(s['unsound_projects'])) / len(s['projects'])
       return ({'grant_cap': math.floor((1 + value_ratio) * s['grant_cap'])})
 
     return ({'grant_cap': s['grant_cap'] })
@@ -22,14 +29,39 @@ def projects_policy(params, step, sH, s):
     """
     current_timestep = len(sH)
     timestep_per_day = 1
+    timestep_per_week = 7
     timestep_per_month = 30
+
+    dao_graph:nx.DiGraph = s['dao_graph']
+    agents = s['agents']
+    projects = s['projects']
 
     # new Grants round
     if (current_timestep % timestep_per_month) == 0:
-        return ({'projects': 0})
+        return ({'projects': []})
     
+    # initiate proposal by coinflip
+    proposal = random.randint(0,1)
+    if proposal == 1:
+      contribution = {
+        'name': "Proposal",
+        'weight': GithubNodeWeight.REPOSITORY
+      }
+      agent = make_contributor('Project Manager ', [contribution])
+      graph = nx.DiGraph()
+      graph.add_nodes_from([agent, contribution])
+      graph.add_edge(agent, contribution, weight=Contribution.PROPOSAL)
+      projects.append(graph)
+      dao_graph.add_node(graph)
+
+
     # increase projects by day
-    return ({'projects': random.randint(0,1) + s['projects']})
+
+    return ({
+      'projects': projects,
+      'agents' : agents,
+      'dao_graph': dao_graph
+    })
 
 
 def values_policy(params, step, sH, s):

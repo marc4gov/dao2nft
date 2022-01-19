@@ -14,8 +14,8 @@ genesis_state = {
     'projects': projects,
     'yes_votes': 30,
     'no_votes': 10,
-    'valuable_projects': [],
-    'unsound_projects': [],
+    'valuable_projects': 0,
+    'unsound_projects': 0,
     'agents' : [],
     'dao_graph': dao_graph
 }

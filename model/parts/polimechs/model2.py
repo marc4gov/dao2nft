@@ -54,7 +54,6 @@ def projects_policy(params, step, sH, s):
       projects.append(graph)
       dao_graph.add_node(graph)
 
-
     # increase projects by day
 
     return ({
@@ -82,16 +81,16 @@ def values_policy(params, step, sH, s):
       })
 
     # every day we assess the projects to either valuable or unsound and adjust the project properties and vote signal accordingly
-
-    valuable = math.floor(random.choice(params['dataset_ratio']) * s['projects'])
+    projects = len(s['projects'])
+    valuable = math.floor(random.choice(params['dataset_ratio']) * projects)
     valuable_increment = 1
     if valuable <= s['valuable_projects'] and s['valuable_projects'] > 0:
       valuable_increment = -1
     unsound_increment = 1
-    unsound = math.floor(random.choice(params['unsound_ratio']) * s['projects'])
+    unsound = math.floor(random.choice(params['unsound_ratio']) * len(s['projects']))
     if unsound <= s['unsound_projects'] and s['unsound_projects'] > 0:
       unsound_increment = -1  
-    projects = s['projects'] if s['projects'] > 0 else 1
+    projects = projects if projects > 0 else 1
     yes_votes = s['yes_votes'] if s['yes_votes'] > 0 else 1 # divison by zero hack
     no_votes = s['no_votes'] if s['no_votes'] > 0 else 1
     value_ratio = (valuable - unsound) / projects
@@ -124,9 +123,10 @@ def participation_policy(params, step, sH, s):
           'dao_members': math.floor(s['dao_members'] - 0.1 * s['voters'])
         })
 
+    projects = len(s['projects'])
     unsound_projects = s['unsound_projects'] if s['unsound_projects'] > 0 else 1
     valuable_projects = s['valuable_projects'] if s['valuable_projects'] > 0 else 1
-    projects = s['projects'] if s['projects'] > 0 else 1
+    projects = projects if projects > 0 else 1
     value_ratio = (valuable_projects - unsound_projects) / projects
     voters = math.floor((1 + value_ratio) * s['voters'])
     return ({
@@ -140,6 +140,12 @@ def update_grants(params, step, sH, s, _input):
 
 def update_projects(params, step, sH, s, _input):
   return ('projects', _input['projects'])
+
+def update_agents(params, step, sH, s, _input):
+  return ('agents', _input['agents'])
+
+def update_dao_graph(params, step, sH, s, _input):
+  return ('dao_graph', _input['dao_graph'])
 
 def update_valuable_projects(params, step, sH, s, _input):
   return ('valuable_projects', _input['valuable_projects'])

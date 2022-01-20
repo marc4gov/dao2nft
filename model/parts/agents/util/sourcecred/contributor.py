@@ -1,4 +1,3 @@
-from importlib.metadata import distribution
 from .oceanrounds import round11_stats, round12_stats, round13_stats, probabilities
 from .contribution import Contribution
 import math
@@ -31,7 +30,7 @@ def generate_projects(round):
   projects = {}
   for prob in probs:
     projects['Project ' + names.get_last_name()] = prob
-  return (projects, round_stats['total_votes'])
+  return (projects, round_stats['total_stakeholders'], round_stats['total_votes'])
 
 def generate_team_members(weight, roles):
   team_members = {}  
@@ -88,30 +87,36 @@ def generate_stakeholders(weights):
         stakeholders['Dolphin ' + names.get_first_name()] = weight
     if weight > 0.01 and weight <= 0.05:
         stakeholders['Fish ' + names.get_first_name()] = weight
-    else:
+    if weight <= 0.01:
         stakeholders['Shrimp ' + names.get_first_name()] = weight
   return stakeholders
 
 def select_stakers(amount, stakers):
-  staker_list = list(stakers.items())
+  staker_list = list(stakers.keys())
+  print(staker_list)
+  stakers2 = staker_list.copy()
   selection = {}
   for i in range(0,amount):
-    entry = random.choice(staker_list)
-    selection[entry[0]] = entry[1]
-    staker_list.remove(entry)
-  return staker_list
+    if len(stakers2) == 0:
+      return selection
+    entry = random.choice(stakers2)
+    selection[entry] = stakers[entry]
+    stakers2.remove(entry)
+  return selection
 
 def generate_stakeholder_graph(projects, stakeholder_size, total_votes):
   graph = nx.DiGraph()
-  weights = probabilities(stakeholder_size, 1.0, random.choice([0.5, 0.6, 0.7]), total_votes)
+  weights = probabilities(stakeholder_size, 1.0, random.choice([0.3, 0.4, 0.5, 0.6]), total_votes)
   
   stakeholders = generate_stakeholders(weights)
-  whales  = {k:v for k,v in stakeholders if 'Whale' in k}
-  dolphins = {k:v for k,v in stakeholders if 'Dolphin' in k}
-  fish = {k:v for k,v in stakeholders if 'Fish' in k}
-  shrimps = {k:v for k,v in stakeholders if 'Shrimp' in k}
+  whales  = {k:v for k,v in stakeholders.items() if 'Whale' in k}
+  dolphins = {k:v for k,v in stakeholders.items() if 'Dolphin' in k}
+  fish = {k:v for k,v in stakeholders.items() if 'Fish' in k}
+  shrimps = {k:v for k,v in stakeholders.items() if 'Shrimp' in k}
   for project_name, project_weight in projects.items():
-    project_stakers = math.floor(project_weight*stakeholder_size)
+    print(project_name)
+    project_stakers = math.floor(random.choice([0.4, 0.5, 0.6]) * stakeholder_size)
+    print("Project Stakers: ", project_stakers)
     project_whales = select_stakers(math.floor(0.2*project_stakers), whales)
     project_dolphins = select_stakers(math.floor(0.2*project_stakers), dolphins)
     project_fish = select_stakers(math.floor(0.3*project_stakers), fish)

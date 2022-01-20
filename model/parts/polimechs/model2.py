@@ -42,14 +42,15 @@ def projects_policy(params, step, sH, s):
         return ({
           'projects': [],
           'agents': [],
-          'dao_graph': nx.DiGraph()
+          'dao_graph': nx.DiGraph(),
+          'round': s['round'] + 1
         })
     
     # initiate proposal by coinflip
     proposal = random.randint(0,2)
     if proposal == 1:
       contribution = "Proposal"
-      agent = 'Project Manager ' + names.get_first_name()
+      agent = 'Project Lead ' + names.get_first_name()
       agents.append(agent)
       graph = nx.DiGraph()
       graph.add_node(agent)

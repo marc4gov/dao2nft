@@ -17,5 +17,6 @@ genesis_state = {
     'valuable_projects': 0,
     'unsound_projects': 0,
     'agents' : [],
-    'dao_graph': dao_graph
+    'dao_graph': dao_graph,
+    'round': 1
 }

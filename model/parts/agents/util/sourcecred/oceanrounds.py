@@ -2,7 +2,6 @@ round11_stats = {
   'projects': 22,
   'granted': 18,
   'new': 5,
-  'top_weight': 0.098,
   'max_votes': 652_000,
   'total_votes': 5_600_000,
   'total_stakeholders': 106
@@ -30,11 +29,11 @@ import scipy.stats
 import numpy as np
 import matplotlib.pyplot as plt
 
-def probabilities(projects, mean, sigma, size):
+def probabilities(entities, mean, sigma, size):
   np.random.seed(1234)
   samples = np.random.lognormal(mean = mean,sigma = sigma, size = size)
   shape,loc,scale = scipy.stats.lognorm.fit(samples,floc=0)
-  num_bins = projects
+  num_bins = entities
   counts,edges,patches = plt.hist(samples,bins=num_bins)
   cdf = scipy.stats.lognorm.cdf(edges,shape,loc=loc,scale=scale)
   prob = np.diff(cdf)

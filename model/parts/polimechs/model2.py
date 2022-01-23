@@ -3,11 +3,8 @@ import random
 import names
 
 import networkx as nx
-from model.parts.agents.util.sourcecred.contribution import (GithubEdgeWeight,
-                                                       GithubNodeWeight, Contribution)
-from model.parts.agents.util.sourcecred.contributor import make_contributor, add_contribution
-
-
+from model.parts.agents.util.sourcecred.contribution import *
+from model.parts.agents.util.sourcecred.contributor import *
 
 def grants_policy(params, step, sH, s):
     """
@@ -34,38 +31,57 @@ def projects_policy(params, step, sH, s):
     timestep_per_month = 30
 
     dao_graph:nx.DiGraph = s['dao_graph']
-    agents = s['agents']
     projects = s['projects']
+    roles = params['roles'][0]
+    stakeholders = s['stakeholders']
 
-    # new Grants round
+    # new Grants round each month
     if (current_timestep % timestep_per_month) == 0:
-        return ({
-          'projects': [],
-          'agents': [],
-          'dao_graph': nx.DiGraph(),
-          'round': s['round'] + 1
-        })
-    
-    # initiate proposal by coinflip
-    proposal = random.randint(0,2)
-    if proposal == 1:
-      contribution = "Proposal"
-      agent = 'Project Lead ' + names.get_first_name()
-      agents.append(agent)
-      graph = nx.DiGraph()
-      graph.add_node(agent)
-      graph.add_node(contribution)
-      graph.add_edge(agent, contribution, weight=Contribution.PROPOSAL)
-      projects.append(graph)
-      
-      dao_graph.add_node(graph)
+      round = s['round']+1
+      project_weights, total_stakeholders, total_votes = generate_projects(round)
+      for name, weight in project_weights.items():
+        team, project_graph = generate_project_graph(name, weight, roles.copy())
+        projects[name] = team
+        dao_graph.add_node(name)
+        dao_graph.add_edge('Round ' + str(round), name, weight=weight)
+        dao_graph = nx.compose(dao_graph, project_graph)
+        # say 1/3 is new entrant
+        # merge 2/3 recurring with 1/3 new entrants
 
-    # increase projects by day
+      return ({
+          'projects': projects,
+          'dao_graph': dao_graph,
+          'round': round
+      })
+
+    # actions in projects by week
+    if (current_timestep % timestep_per_week) == 0:
+      for project_name, team in projects.items():
+        # check milestones progress
+        milestone_nr = check_last_milestone(dao_graph[project_name])
+        # do a coin flip to detemine a milestone 
+        flipped = random.choice([True, False])
+        if flipped:
+          milestone_nr += 1
+          cred = reach_milestone(milestone_nr * dao_graph[project_name]['weight'])
+          dao_graph[project_name]['Milestone' + str(milestone_nr)] = True
+          for name, weight in team.items():
+            new_weight = weight * (1 + cred)
+            team[name] = new_weight
+            dao_graph.node[name]['weight'] = new_weight
+          projects[project_name] = team
+
+    # actions in projects by day
+    for project_name, team in projects.items():
+      for name, weight in team.items():
+        new_weight = weight * (1 + random.choice([do_discord_action(), do_github_action(), 0]))
+        team[name] = new_weight
+        dao_graph.node[name]['weight'] = new_weight
+      projects[project_name] = team
 
     return ({
       'projects': projects,
-      'agents' : agents,
-      'dao_graph': dao_graph
+      'dao_graph': dao_graph,
     })
 
 

@@ -32,8 +32,8 @@ partial_state_update_block = [
         },
         'variables': {
             'projects': update_projects,
-            'agents': update_agents,
-            'dao_graph': update_dao_graph
+            'dao_graph': update_dao_graph,
+            'round': update_round
         }
     }
 ]

@@ -84,6 +84,12 @@ def generate_project_graph(project_name, project_weight, roles):
     graph.add_edge(project_name, name, weight=weight)
   return (team, graph)
 
+
+def adjust_team_weights(team: dict, cred):
+  for name, weight in team.items():
+    team[name] = weight * (1 + cred)
+  return team
+
 # +
 # Whales, Dolphin, Fish, Shrimp are adopted from Ocean pictures in Ocean Port, but generalised "size"
 
@@ -153,16 +159,14 @@ def finish_project(weight, factor):
   return (factor * weight)
 
 def check_last_milestone(milestones):
-  if milestones['Milestone1'] == False:
-    return 0
-  if milestones['Milestone1'] == True and milestones['Milestone2'] == False:
-    return 1
-  if milestones['Milestone2'] == True and milestones['Milestone3'] == False:
-    return 2
-  if milestones['Milestone3'] == True and milestones['Milestone4'] == False:
-    return 3
-  if milestones['Milestone4'] == True:
-    return 4
+  # print("Milestones: ", milestones)
+  for k, v in milestones.items():
+    if k == 'Milestone1' and v == False: return 0
+    if k == 'Milestone2' and v == False: return 1
+    if k == 'Milestone3' and v == False: return 2
+    if k == 'Milestone4' and v == False: return 3
+    if k == 'Milestone4' and v == True: return 4
+  return 0
 
 def mint_nft(cred):
   if cred > 0 and cred < 10:

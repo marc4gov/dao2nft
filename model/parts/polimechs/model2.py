@@ -16,7 +16,8 @@ def grants_policy(params, step, sH, s):
 
     # adjust the grant CAP according to the amount of valuable projects in this round
     if (current_timestep % timestep_per_month) == 0:
-      value_ratio = (s['valuable_projects'] - s['unsound_projects']) / len(s['projects'])
+      total_projects = len(s['projects']) if len(s['projects']) > 0 else 1
+      value_ratio = (s['valuable_projects'] - s['unsound_projects']) / total_projects
       return ({'grant_cap': math.floor((1 + value_ratio) * s['grant_cap'])})
 
     return ({'grant_cap': s['grant_cap'] })
@@ -32,21 +33,53 @@ def projects_policy(params, step, sH, s):
 
     dao_graph:nx.DiGraph = s['dao_graph']
     projects = s['projects']
-    roles = params['roles'][0]
+    roles = params['roles']
     stakeholders = s['stakeholders']
+    round = s['round']
 
     # new Grants round each month
     if (current_timestep % timestep_per_month) == 0:
-      round = s['round']+1
+      round += 1
+      # generate new projects
       project_weights, total_stakeholders, total_votes = generate_projects(round)
-      for name, weight in project_weights.items():
-        team, project_graph = generate_project_graph(name, weight, roles.copy())
-        projects[name] = team
+      
+      # recurring means how many projects will continue for the next round
+      recurring = random.choice(params['recurring_factor'])
+      print("Recurring: ", recurring)
+      recurring_factor = math.floor(recurring * len(project_weights))
+      recurring_projects = select_entities(recurring_factor, projects)
+      recurring_projects_total_weight = 0
+      for name in recurring_projects.keys():
+        recurring_projects_total_weight += dao_graph.nodes[name]['weight']
+      # new entrant selection
+      new_factor = math.floor((1-recurring) * len(project_weights))
+      new_entrants = select_entities(new_factor, project_weights)
+      new_entrants_total_weight = sum(new_entrants.values())
+      # weights are offset because of random selections
+      missing_weight = 1 - (recurring_projects_total_weight + new_entrants_total_weight)
+      total_new_entrants = len(new_entrants) if len(new_entrants) > 0 else 1
+      total_recurring_projects = len(recurring_projects) if len(recurring_projects) > 0 else 1
+      missing_weight_per_project = missing_weight/(total_new_entrants + total_recurring_projects)
+      # init the new entrants
+      for name, weight in new_entrants.items():
+        team, project_graph = generate_project_graph(name, weight + missing_weight_per_project, roles.copy())
+        new_entrants[name] = team
         dao_graph.add_node(name)
-        dao_graph.add_edge('Round ' + str(round), name, weight=weight)
+        dao_graph.add_edge('Round ' + str(round), name, weight=weight + missing_weight_per_project)
         dao_graph = nx.compose(dao_graph, project_graph)
-        # say 1/3 is new entrant
-        # merge 2/3 recurring with 1/3 new entrants
+      # adjust weights per project and per team in recurring projects
+      for project_name, team in recurring_projects.items():
+        dao_graph.nodes[project_name]['weight'] += missing_weight_per_project
+        for name, weight in team.items():
+          team_total = len(team) if len(team) > 0 else 1
+          new_weight = weight + missing_weight_per_project/team_total
+          team[name] = new_weight
+          dao_graph.nodes[name]['weight'] = new_weight
+        recurring_projects[project_name] = team
+        dao_graph.add_edge('Round ' + str(round), project_name, weight=weight)
+
+      # merge the new entrants and the recurring projects
+      projects = {**recurring_projects, **new_entrants}
 
       return ({
           'projects': projects,
@@ -58,30 +91,32 @@ def projects_policy(params, step, sH, s):
     if (current_timestep % timestep_per_week) == 0:
       for project_name, team in projects.items():
         # check milestones progress
-        milestone_nr = check_last_milestone(dao_graph[project_name])
-        # do a coin flip to detemine a milestone 
+        project_attrs = dao_graph.nodes[project_name]
+        milestone_nr = check_last_milestone(project_attrs)
+        # do a coin flip to determine if a milestone is reached
         flipped = random.choice([True, False])
         if flipped:
           milestone_nr += 1
-          cred = reach_milestone(milestone_nr * dao_graph[project_name]['weight'])
-          dao_graph[project_name]['Milestone' + str(milestone_nr)] = True
+          cred = reach_milestone(milestone_nr, dao_graph.nodes[project_name]['weight'])
+          dao_graph.nodes[project_name]['Milestone' + str(milestone_nr)] = True
+          team = adjust_team_weights(team, cred)
           for name, weight in team.items():
-            new_weight = weight * (1 + cred)
-            team[name] = new_weight
-            dao_graph.node[name]['weight'] = new_weight
+            dao_graph.nodes[name]['weight'] = weight
           projects[project_name] = team
 
     # actions in projects by day
     for project_name, team in projects.items():
       for name, weight in team.items():
+        # do a random action per team member or nothing
         new_weight = weight * (1 + random.choice([do_discord_action(), do_github_action(), 0]))
         team[name] = new_weight
-        dao_graph.node[name]['weight'] = new_weight
+        dao_graph.nodes[name]['weight'] = new_weight
       projects[project_name] = team
 
     return ({
       'projects': projects,
       'dao_graph': dao_graph,
+      'round': round
     })
 
 
@@ -186,3 +221,6 @@ def update_voters(params, step, sH, s, _input):
 
 def update_dao_members(params, step, sH, s, _input):
   return ('dao_members', _input['dao_members'])
+
+def update_round(params, step, sH, s, _input):
+  return ('round', _input['round'])

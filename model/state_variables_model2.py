@@ -34,5 +34,6 @@ genesis_state = {
     'unsound_projects': 0,
     'stakeholders': stakeholders,
     'dao_graph': dao_graph,
+    'nft': {},
     'round': 1
 }

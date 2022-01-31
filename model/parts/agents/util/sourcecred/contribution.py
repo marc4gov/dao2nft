@@ -38,6 +38,16 @@ class NFT(Enum):
   DIAMOND = 4
   PLATINUM = 5
 
+class OceanNFT(Enum):
+  SHRIMP = 1
+  OYSTER = 2
+  FISH = 3
+  DOLPHIN = 4
+  FISHERMAN = 5
+  MANTA = 6
+  OCEAN = 7
+  ATLANTIS = 8
+
 class DiscordNodeWeight(Enum):
   TOPIC = 0 # Sourcecred default suggests a post is not valuable but a reaction has value. See article.
   POST = 0

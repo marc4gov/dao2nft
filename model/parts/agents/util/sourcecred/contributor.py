@@ -1,5 +1,5 @@
 from .oceanrounds import round11_stats, round12_stats, round13_stats, probabilities
-from .contribution import Contribution, NFT, GithubEdgeWeight, GithubNodeWeight, DiscordEdgeWeight, DiscordNodeWeight, ProofOf
+from .contribution import Contribution, NFT, GithubEdgeWeight, GithubNodeWeight, DiscordEdgeWeight, DiscordNodeWeight, OceanNFT, ProofOf
 import math
 import networkx as nx
 import random
@@ -170,16 +170,34 @@ def check_last_milestone(milestones):
 
 def mint_nft(cred):
   if cred > 0 and cred < 10:
-    return NFT.BRONZE
-  if cred > 10 and cred < 100:
-    return NFT.SILVER
+    return OceanNFT.SHRIMP
+  if cred > 10 and cred < 20:
+    return OceanNFT.OYSTER
+  if cred > 20 and cred < 50:
+    return OceanNFT.FISH
+  if cred > 50 and cred < 100:
+    return OceanNFT.DOLPHIN
   if cred > 100 and cred < 200:
-    return NFT.GOLD
+    return OceanNFT.FISHERMAN
   if cred > 200 and cred < 500:
-    return NFT.DIAMOND
-  if cred > 500:
-    return NFT.PLATINUM
-  return NFT.BRONZE
+    return OceanNFT.MANTA
+  if cred > 500 and cred < 1000:
+    return OceanNFT.OCEAN
+  if cred > 1000:
+    return OceanNFT.ATLANTIS
+  return OceanNFT.SHRIMP
+  
+
+def decay_function(cred):
+  if cred < 10:
+    return 1
+  if cred > 10:
+    return (1-1/(0.1 * cred + 2))
+  if cred > 100:
+    return (1-1/(0.01 * cred + 5))
+  if cred > 1000:
+    return (1-1/(0.001 * cred + 5))
+  return 1
 
 def pay_out(votes, project_weight, stakeholder_weight, constant):
   return (stakeholder_weight/project_weight) * votes * constant

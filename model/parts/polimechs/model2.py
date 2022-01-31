@@ -122,46 +122,92 @@ def projects_policy(params, step, sH, s):
 
 def values_policy(params, step, sH, s):
     """
-    What kind of projects deliver good value?
+    What kind of projects and team members deliver value?
     """
     current_timestep = len(sH)
     timestep_per_day = 1
     timestep_per_month = 30
+    nft = s['nft']
+    yes_votes = s['yes_votes']
+    no_votes = s['no_votes']
 
     # new Grants round
+    # start with 80% of last round's votes
     if (current_timestep % timestep_per_month) == 0:
       return ({
           'valuable_projects': 0,
           'unsound_projects': 0,
-          'yes_votes': math.floor(0.8 * s['voters']),
-          'no_votes': math.floor(0.2 * s['voters']),
+          'yes_votes': yes_votes,
+          'no_votes': no_votes,
+          'nft': nft
       })
 
-    # every day we assess the projects to either valuable or unsound and adjust the project properties and vote signal accordingly
-    projects = len(s['projects'])
-    valuable = math.floor(random.choice(params['dataset_ratio']) * projects)
+    # every day we assess the projects on NFT status and adjust the project properties and vote signal accordingly
+    projects = s['projects']
+    nft_earners = 0
+    for name, team in projects.items():
+        if name in nft.keys():
+          nft_old = nft[name]
+        else:
+          nft_old = OceanNFT.SHRIMP
+        team_weight = get_team_weight(team)
+        nft[name] = mint_nft(team_weight)
+        if nft[name].value > nft_old.value:
+          nft_earners += 1
+    
+    # if many projects score NFTs, yes votes will go up
+    total_projects = len(projects) if len(projects) > 0 else 1
+    nft_earn_ratio = nft_earners/total_projects
+    if (nft_earn_ratio > 0.2):
+      yes_votes = (1 + (nft_earn_ratio * nft_earn_ratio)) * yes_votes
+      no_votes = (1 - (nft_earn_ratio * nft_earn_ratio)) * no_votes
+    else:
+      yes_votes = (1 - (nft_earn_ratio * nft_earn_ratio)) * yes_votes
+      no_votes = (1 + (nft_earn_ratio * nft_earn_ratio)) * no_votes
+
+    # ugly hack - need to change
+    valuable = math.floor(random.choice(params['dataset_ratio']) * len(projects))
     valuable_increment = 1
     if valuable <= s['valuable_projects'] and s['valuable_projects'] > 0:
       valuable_increment = -1
     unsound_increment = 1
-    unsound = math.floor(random.choice(params['unsound_ratio']) * len(s['projects']))
+    unsound = math.floor(random.choice(params['unsound_ratio']) * len(projects))
     if unsound <= s['unsound_projects'] and s['unsound_projects'] > 0:
       unsound_increment = -1  
-    projects = projects if projects > 0 else 1
-    yes_votes = s['yes_votes'] if s['yes_votes'] > 0 else 1 # divison by zero hack
-    no_votes = s['no_votes'] if s['no_votes'] > 0 else 1
-    value_ratio = (valuable - unsound) / projects
     
     return ({
         'valuable_projects': s['valuable_projects'] + valuable_increment,
         'unsound_projects': s['unsound_projects'] + unsound_increment,
-        'yes_votes': math.floor(s['yes_votes'] * (1 + value_ratio)),
-        'no_votes': math.floor(s['no_votes'] * (1 - value_ratio)),
+        'yes_votes': yes_votes,
+        'no_votes': no_votes,
+        'nft': nft
     })
+
+def decay_policy(params, step, sH, s):
+    """
+    What kind of decay to put on the weights?
+    """
+
+    projects = s['projects']
+    dao_graph = s['dao_graph']
+    for project_name, team in projects.items():
+      cred = get_team_weight(team)
+      decay = decay_function(cred)
+      for name, weight in team.items():
+        new_weight = weight * decay
+        team[name] = new_weight
+        dao_graph.nodes[name]['weight'] = new_weight
+      projects[project_name] = team
+
+    return ({
+      'projects': projects,
+      'dao_graph': dao_graph,
+    })
+
 
 def participation_policy(params, step, sH, s):
     """
-    Update the projects state.
+    Update the participation state.
     """
     current_timestep = len(sH)
     timestep_per_day = 1
@@ -191,6 +237,8 @@ def participation_policy(params, step, sH, s):
       'dao_members': s['dao_members']
     })
 
+
+# state update functions
 
 def update_grants(params, step, sH, s, _input):
   return ('grant_cap', _input['grant_cap'])
@@ -224,3 +272,6 @@ def update_dao_members(params, step, sH, s, _input):
 
 def update_round(params, step, sH, s, _input):
   return ('round', _input['round'])
+
+def update_nft(params, step, sH, s, _input):
+  return ('nft', _input['nft'])

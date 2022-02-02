@@ -15,7 +15,7 @@ projects = {}
 stakeholders = generate_stakeholders(weights)
 projects_weights, total_stakeholders, total_votes = generate_projects(13)
 for name, weight in projects_weights.items():
-    team, project_graph = generate_project_graph(name, weight, params['roles'][0].copy())
+    team, project_graph = generate_project_graph(name, weight, params['roles'][0].copy(), 0)
     projects[name] = team
     dao_graph.add_node(name)
     attrs = {name: {"Milestone1": False, "Milestone2": False, "Milestone3": False, "Milestone4": False, "Finished": False, "ROI": False}}

@@ -45,7 +45,7 @@ def projects_policy(params, step, sH, s):
       
       # recurring means how many projects will continue for the next round
       recurring = random.choice(params['recurring_factor'])
-      print("Recurring: ", recurring)
+      # print("Recurring: ", recurring)
       recurring_factor = math.floor(recurring * len(project_weights))
       recurring_projects = select_entities(recurring_factor, projects)
       recurring_projects_total_weight = 0
@@ -62,21 +62,15 @@ def projects_policy(params, step, sH, s):
       missing_weight_per_project = missing_weight/(total_new_entrants + total_recurring_projects)
       # init the new entrants
       for name, weight in new_entrants.items():
-        team, project_graph = generate_project_graph(name, weight + missing_weight_per_project, roles.copy())
+        team, project_graph = generate_project_graph(name, weight + missing_weight_per_project, roles.copy(), current_timestep)
         new_entrants[name] = team
         dao_graph.add_node(name)
         dao_graph.add_edge('Round ' + str(round), name, weight=weight + missing_weight_per_project)
         dao_graph = nx.compose(dao_graph, project_graph)
-      # adjust weights per project and per team in recurring projects
+      # adjust weights per project in recurring projects
       for project_name, team in recurring_projects.items():
         dao_graph.nodes[project_name]['weight'] += missing_weight_per_project
-        for name, weight in team.items():
-          team_total = len(team) if len(team) > 0 else 1
-          new_weight = weight + missing_weight_per_project/team_total
-          team[name] = new_weight
-          dao_graph.nodes[name]['weight'] = new_weight
-        recurring_projects[project_name] = team
-        dao_graph.add_edge('Round ' + str(round), project_name, weight=weight)
+        dao_graph.add_edge('Round ' + str(round), project_name, weight=dao_graph.nodes[project_name]['weight'])
 
       # merge the new entrants and the recurring projects
       projects = {**recurring_projects, **new_entrants}
@@ -99,18 +93,19 @@ def projects_policy(params, step, sH, s):
           milestone_nr += 1
           cred = reach_milestone(milestone_nr, dao_graph.nodes[project_name]['weight'])
           dao_graph.nodes[project_name]['Milestone' + str(milestone_nr)] = True
-          team = adjust_team_weights(team, cred)
-          for name, weight in team.items():
-            dao_graph.nodes[name]['weight'] = weight
+          team = append_team_weights(team, cred/len(team), current_timestep)
+          for name, weights in team.items():
+            dao_graph.nodes[name]['weight'] = reduce_weigths(weights, current_timestep)
           projects[project_name] = team
 
     # actions in projects by day
     for project_name, team in projects.items():
-      for name, weight in team.items():
-        # do a random action per team member or nothing
-        new_weight = weight * (1 + random.choice([do_discord_action(), do_github_action(), 0]))
-        team[name] = new_weight
-        dao_graph.nodes[name]['weight'] = new_weight
+      for name, weights in team.items():
+        # do an action per team member (in 40% of the time) or nothing (in 60% of the time)
+        new_weight = random.choice([do_discord_action(), do_github_action(), 0, 0, 0])
+        if new_weight > 0:
+          team[name].append((new_weight, current_timestep))
+          dao_graph.nodes[name]['weight'] = reduce_weigths(team[name], current_timestep)
       projects[project_name] = team
 
     return ({
@@ -150,7 +145,7 @@ def values_policy(params, step, sH, s):
           nft_old = nft[name]
         else:
           nft_old = OceanNFT.SHRIMP
-        team_weight = get_team_weight(team)
+        team_weight = get_team_weight(team, current_timestep)
         nft[name] = mint_nft(team_weight)
         if nft[name].value > nft_old.value:
           nft_earners += 1
@@ -181,27 +176,6 @@ def values_policy(params, step, sH, s):
         'yes_votes': yes_votes,
         'no_votes': no_votes,
         'nft': nft
-    })
-
-def decay_policy(params, step, sH, s):
-    """
-    What kind of decay to put on the weights?
-    """
-
-    projects = s['projects']
-    dao_graph = s['dao_graph']
-    for project_name, team in projects.items():
-      cred = get_team_weight(team)
-      decay = decay_function(cred)
-      for name, weight in team.items():
-        new_weight = weight * decay
-        team[name] = new_weight
-        dao_graph.nodes[name]['weight'] = new_weight
-      projects[project_name] = team
-
-    return ({
-      'projects': projects,
-      'dao_graph': dao_graph,
     })
 
 

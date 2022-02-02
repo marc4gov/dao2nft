@@ -4,6 +4,8 @@ import math
 import networkx as nx
 import random
 import names
+import functools
+import operator
 
 # +
 # Here we mimic the size of the ecosystem per round 11-13. Each month a new round. We loop each round.
@@ -33,35 +35,35 @@ def generate_projects(round):
 # small(<0.05 = 3 people)/medium/big(>0.1 = 5 members)
 # members picked randomly from the 5 roles in the parameters in the model - engineers, architects, etc. Can we tailored
 
-def generate_team_members(weight, roles):
+def generate_team_members(weight, roles, current_timestep):
   team_members = {}  
   if weight <= 0.05:
     role = random.choice(roles)
-    team_members[role + ' ' + names.get_first_name()] = weight/3
+    team_members[role + ' ' + names.get_first_name()] = [(weight/3, current_timestep)]
     roles.remove(role)
     role = random.choice(roles)
-    team_members[role + ' ' + names.get_first_name()] = weight/3
+    team_members[role + ' ' + names.get_first_name()] = [(weight/3, current_timestep)]
   if weight > 0.05 and weight <= 0.1:
     role = random.choice(roles)
-    team_members[role + ' ' + names.get_first_name()] = weight/4
+    team_members[role + ' ' + names.get_first_name()] = [(weight/4, current_timestep)]
     roles.remove(role)
     role = random.choice(roles)
-    team_members[role + ' ' + names.get_first_name()] = weight/4
+    team_members[role + ' ' + names.get_first_name()] = [(weight/4, current_timestep)]
     roles.remove(role)
     role = random.choice(roles)
-    team_members[role + ' ' + names.get_first_name()] = weight/4
+    team_members[role + ' ' + names.get_first_name()] = [(weight/4, current_timestep)]
   if weight > 0.1:
     role = random.choice(roles)
-    team_members[role + ' ' + names.get_first_name()] = weight/5
+    team_members[role + ' ' + names.get_first_name()] = [(weight/5, current_timestep)]
     roles.remove(role)
     role = random.choice(roles)
-    team_members[role + ' ' + names.get_first_name()] = weight/5
+    team_members[role + ' ' + names.get_first_name()] = [(weight/5, current_timestep)]
     roles.remove(role)
     role = random.choice(roles)
-    team_members[role + ' ' + names.get_first_name()] = weight/5
+    team_members[role + ' ' + names.get_first_name()] = [(weight/5, current_timestep)]
     roles.remove(role)
     role = random.choice(roles)
-    team_members[role + ' ' + names.get_first_name()] = weight/5
+    team_members[role + ' ' + names.get_first_name()] = [(weight/5, current_timestep)]
   return team_members
 
 # +
@@ -70,24 +72,24 @@ def generate_team_members(weight, roles):
 # Sourcecred is a complex markow chain, for simulation purposes we try to design simple.
 # outcome is a project graph, mimicking sourcecred
 
-def generate_project_graph(project_name, project_weight, roles):
+def generate_project_graph(project_name, project_weight, roles, current_timestep):
   pl = 'Project Lead ' + names.get_first_name()
   graph = nx.DiGraph()
   graph.add_node(pl)
   graph.add_node(project_name, weight=project_weight)
   graph.add_edge(project_name, pl, weight=Contribution.PROPOSAL.value)
-  team_members = generate_team_members(project_weight, roles)
+  team_members = generate_team_members(project_weight, roles, current_timestep)
   team_size = len(team_members.keys())
-  team = {pl:project_weight/(team_size + 1), **team_members}
-  for name, weight in team_members.items():
+  team = {pl:[(project_weight/(team_size + 1),current_timestep)] , **team_members}
+  for name, weights in team_members.items():
     graph.add_node(name)
-    graph.add_edge(project_name, name, weight=weight)
+    graph.add_edge(project_name, name, weight=reduce_weigths(weights, current_timestep))
   return (team, graph)
 
 
-def adjust_team_weights(team: dict, cred):
+def append_team_weights(team: dict, cred, current_timestep):
   for name, weight in team.items():
-    team[name] = weight * (1 + cred)
+    team[name].append((cred, current_timestep))
   return team
 
 # +
@@ -202,9 +204,27 @@ def decay_function(cred):
 def pay_out(votes, project_weight, stakeholder_weight, constant):
   return (stakeholder_weight/project_weight) * votes * constant
 
-def get_team_weight(team):
+half_life = [0.5**i for i in range(50)]
+def decay(initial_timestep, current_timestep, decay_list = half_life):
+  time_passed = current_timestep - initial_timestep
+  if time_passed % 7 == 0:
+    return decay_list[math.floor(time_passed/7)]
+  else:
+    return 1
+
+def decayed_weight(weight:tuple, current_timestep):
+  return weight[0] * decay(weight[1], current_timestep)
+
+def reduce_weigths(weights, current_timestep):
+  decayed_weigths = []
+  for i in range(len(weights)):
+    decayed_weigths.append(decayed_weight(weights[i], current_timestep))
+  return functools.reduce(operator.add, decayed_weigths)
+
+def get_team_weight(team, current_timestep):
   total = 0
-  for name, cred in team.items():
+  for name, weights in team.items():
+    cred = reduce_weigths(weights, current_timestep)
     if 'Project Lead' in name:
       total += cred * 2
     else:
@@ -214,9 +234,9 @@ def get_team_weight(team):
         total += cred
   return total
 
-def assess_project(team, funds_requested):
-  weight = get_team_weight(team)
-  return weight * funds_requested * 0.1
+# def assess_project(team, funds_requested):
+#   weight = get_team_weight(team)
+#   return weight * funds_requested * 0.1
 
 def do_discord_action():
   return random.choice(list(DiscordEdgeWeight))

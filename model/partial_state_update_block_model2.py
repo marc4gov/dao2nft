@@ -15,7 +15,6 @@ partial_state_update_block = [
             'grants_policy': grants_policy,
             'values_policy': values_policy,
             'participation_policy': participation_policy,
-            'decay_policy': decay_policy,
         },
         'variables': {
             'grant_cap': update_grants,
@@ -26,8 +25,6 @@ partial_state_update_block = [
             'voters': update_voters,
             'dao_members': update_dao_members,
             'nft': update_nft,
-            'projects': update_projects,
-            'dao_graph': update_dao_graph,
         },
     },
     {

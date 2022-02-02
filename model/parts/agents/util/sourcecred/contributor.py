@@ -190,16 +190,16 @@ def mint_nft(cred):
   return OceanNFT.SHRIMP
   
 
-def decay_function(cred):
-  if cred < 10:
-    return 1
-  if cred > 10:
-    return (1-1/(0.1 * cred + 2))
-  if cred > 100:
-    return (1-1/(0.01 * cred + 5))
-  if cred > 1000:
-    return (1-1/(0.001 * cred + 5))
-  return 1
+# def decay_function(cred):
+#   if cred < 10:
+#     return 1
+#   if cred > 10:
+#     return (1-1/(0.1 * cred + 2))
+#   if cred > 100:
+#     return (1-1/(0.01 * cred + 5))
+#   if cred > 1000:
+#     return (1-1/(0.001 * cred + 5))
+#   return 1
 
 def pay_out(votes, project_weight, stakeholder_weight, constant):
   return (stakeholder_weight/project_weight) * votes * constant

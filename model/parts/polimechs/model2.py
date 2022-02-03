@@ -101,10 +101,10 @@ def projects_policy(params, step, sH, s):
     # actions in projects by day
     for project_name, team in projects.items():
       for name, weights in team.items():
-        # do an action per team member (in 40% of the time) or nothing (in 60% of the time)
-        new_weight = random.choice([do_discord_action(), do_github_action(), 0, 0, 0])
+        # do an action per team member (in 80% of the time) or nothing (in 20% of the time)
+        new_weight = random.choice([do_discord_action(), do_github_action(), do_contribution_action(), 0])
         if new_weight > 0:
-          team[name].append((new_weight, current_timestep))
+          team[name].append(Weight(new_weight, current_timestep))
           dao_graph.nodes[name]['weight'] = reduce_weigths(team[name], current_timestep)
       projects[project_name] = team
 

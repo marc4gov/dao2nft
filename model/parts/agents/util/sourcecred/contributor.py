@@ -1,11 +1,14 @@
 from .oceanrounds import round11_stats, round12_stats, round13_stats, probabilities
 from .contribution import Contribution, NFT, GithubEdgeWeight, GithubNodeWeight, DiscordEdgeWeight, DiscordNodeWeight, OceanNFT, ProofOf
+from ...util.nft import Weight
 import math
 import networkx as nx
 import random
 import names
 import functools
 import operator
+from typing import List
+
 
 # +
 # Here we mimic the size of the ecosystem per round 11-13. Each month a new round. We loop each round.
@@ -39,31 +42,31 @@ def generate_team_members(weight, roles, current_timestep):
   team_members = {}  
   if weight <= 0.05:
     role = random.choice(roles)
-    team_members[role + ' ' + names.get_first_name()] = [(weight/3, current_timestep)]
+    team_members[role + ' ' + names.get_first_name()] = [Weight(weight/3, current_timestep)]
     roles.remove(role)
     role = random.choice(roles)
-    team_members[role + ' ' + names.get_first_name()] = [(weight/3, current_timestep)]
+    team_members[role + ' ' + names.get_first_name()] = [Weight(weight/3, current_timestep)]
   if weight > 0.05 and weight <= 0.1:
     role = random.choice(roles)
-    team_members[role + ' ' + names.get_first_name()] = [(weight/4, current_timestep)]
+    team_members[role + ' ' + names.get_first_name()] = [Weight(weight/4, current_timestep)]
     roles.remove(role)
     role = random.choice(roles)
-    team_members[role + ' ' + names.get_first_name()] = [(weight/4, current_timestep)]
+    team_members[role + ' ' + names.get_first_name()] = [Weight(weight/4, current_timestep)]
     roles.remove(role)
     role = random.choice(roles)
-    team_members[role + ' ' + names.get_first_name()] = [(weight/4, current_timestep)]
+    team_members[role + ' ' + names.get_first_name()] = [Weight(weight/4, current_timestep)]
   if weight > 0.1:
     role = random.choice(roles)
-    team_members[role + ' ' + names.get_first_name()] = [(weight/5, current_timestep)]
+    team_members[role + ' ' + names.get_first_name()] = [Weight(weight/5, current_timestep)]
     roles.remove(role)
     role = random.choice(roles)
-    team_members[role + ' ' + names.get_first_name()] = [(weight/5, current_timestep)]
+    team_members[role + ' ' + names.get_first_name()] = [Weight(weight/5, current_timestep)]
     roles.remove(role)
     role = random.choice(roles)
-    team_members[role + ' ' + names.get_first_name()] = [(weight/5, current_timestep)]
+    team_members[role + ' ' + names.get_first_name()] = [Weight(weight/5, current_timestep)]
     roles.remove(role)
     role = random.choice(roles)
-    team_members[role + ' ' + names.get_first_name()] = [(weight/5, current_timestep)]
+    team_members[role + ' ' + names.get_first_name()] = [Weight(weight/5, current_timestep)]
   return team_members
 
 # +
@@ -80,7 +83,7 @@ def generate_project_graph(project_name, project_weight, roles, current_timestep
   graph.add_edge(project_name, pl, weight=Contribution.PROPOSAL.value)
   team_members = generate_team_members(project_weight, roles, current_timestep)
   team_size = len(team_members.keys())
-  team = {pl:[(project_weight/(team_size + 1),current_timestep)] , **team_members}
+  team = {pl:[Weight(project_weight/(team_size + 1),current_timestep)] , **team_members}
   for name, weights in team_members.items():
     graph.add_node(name)
     graph.add_edge(project_name, name, weight=reduce_weigths(weights, current_timestep))
@@ -88,8 +91,8 @@ def generate_project_graph(project_name, project_weight, roles, current_timestep
 
 
 def append_team_weights(team: dict, cred, current_timestep):
-  for name, weight in team.items():
-    team[name].append((cred, current_timestep))
+  for name in team.keys():
+    team[name].append(Weight(cred, current_timestep))
   return team
 
 # +
@@ -204,21 +207,23 @@ def mint_nft(cred):
 def pay_out(votes, project_weight, stakeholder_weight, constant):
   return (stakeholder_weight/project_weight) * votes * constant
 
-half_life = [0.5**i for i in range(50)]
-def decay(initial_timestep, current_timestep, decay_list = half_life):
-  time_passed = current_timestep - initial_timestep
-  if time_passed % 7 == 0:
-    return decay_list[math.floor(time_passed/7)]
-  else:
-    return 1
+# half_life = [0.5**i for i in range(50)]
+# def decay(initial_timestep, current_timestep, decay_list = half_life):
+#   time_passed = current_timestep - initial_timestep
+#   if time_passed % 7 == 0:
+#     return decay_list[math.floor(time_passed/7)]
+#   else:
+#     return 1
 
-def decayed_weight(weight:tuple, current_timestep):
-  return weight[0] * decay(weight[1], current_timestep)
+# def decayed_weight(weight:tuple, current_timestep):
+#   return weight[0] * decay(weight[1], current_timestep)
 
-def reduce_weigths(weights, current_timestep):
+def reduce_weigths(weights:List[Weight], current_timestep):
   decayed_weigths = []
   for i in range(len(weights)):
-    decayed_weigths.append(decayed_weight(weights[i], current_timestep))
+    weights[i].decay(current_timestep)
+    new_weight = weights[i].total
+    decayed_weigths.append(new_weight)
   return functools.reduce(operator.add, decayed_weigths)
 
 def get_team_weight(team, current_timestep):
@@ -243,6 +248,9 @@ def do_discord_action():
 
 def do_github_action():
   return random.choice(list(GithubEdgeWeight))
+
+def do_contribution_action():
+  return random.choice(list(Contribution))
 
 def do_proof():
   return random.choice(list(ProofOf))

@@ -30,10 +30,11 @@ partial_state_update_block = [
     {
         'policies': {
             'projects_policy': projects_policy,
+            'curation_policy': curation_policy,
         },
         'variables': {
             'projects': update_projects,
-            'dao_graph': update_dao_graph,
+            'voters': update_voters,
             'round': update_round
         }
     }

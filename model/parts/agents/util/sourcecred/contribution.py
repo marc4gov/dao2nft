@@ -31,7 +31,14 @@ class ProofOf(float, Enum):
   DEFENDER = 5
   IDEATION = 6
   
-class NFT(Enum):
+class TaskType(float, Enum):
+  PLAN = 1
+  CODE = 2
+  DESIGN = 3
+  MARKET = 4
+  RESEARCH = 5
+
+class NFTType(Enum):
   BRONZE = 1
   SILVER = 2
   GOLD = 3

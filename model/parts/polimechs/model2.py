@@ -1,5 +1,7 @@
 import math
 import random
+from model.parts.agents.Curator import Curator, Verdict
+from model.parts.agents.Project import Project
 import names
 
 import networkx as nx
@@ -177,6 +179,46 @@ def values_policy(params, step, sH, s):
         'no_votes': no_votes,
         'nft': nft
     })
+
+
+def curation_policy(params, step, sH, s):
+    """
+    Update the curation state.
+    """
+    current_timestep = len(sH)
+    timestep_per_day = 1
+    timestep_per_week = 7
+    timestep_per_month = 30
+
+    curator:Curator = s['curator']
+    projects:List[Project] = s['projects']
+
+    # per week or per new Grants round
+    if (current_timestep % timestep_per_week) == 0 or (current_timestep % timestep_per_month) == 0:
+      for project in projects:
+        (delayed, delivered, in_progress, finished) = curateProject(project)
+        if not finished:
+          if delayed >= 0 and delayed < 3:
+            curator.addAudit(project.name, Verdict.DELAYED)
+          if delayed >= 3 and delayed < 7:
+            curator.addAudit(project.name, Verdict.MILESTONES_NOT_MET)
+          if delayed >= 7 and delayed < 14:
+            curator.addAudit(project.name, Verdict.FAILED)
+          if delayed >= 14 and delayed < 21:
+            curator.addAudit(project.name, Verdict.ADVERSARY)
+          else:
+            curator.addAudit(project.name, Verdict.RUGPULL)
+        else:
+          curator.addAudit(project.name, Verdict.DELIVERED)
+
+      return({'curator': curator})
+
+    for project in projects:
+      (delayed, delivered, in_progress, finished) = curateProject(project)
+      if finished:
+        curator.addAudit(project.name, Verdict.DELIVERED)
+    
+    return({'curator': curator})
 
 
 def participation_policy(params, step, sH, s):

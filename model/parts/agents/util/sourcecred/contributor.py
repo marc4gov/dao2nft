@@ -1,4 +1,4 @@
-from model.parts.agents.Curator import Curator
+from model.parts.agents.Curator import Curator, Verdict
 from .oceanrounds import round11_stats, round12_stats, round13_stats, probabilities
 from .contribution import Contribution, TaskType, GithubEdgeWeight, GithubNodeWeight, DiscordEdgeWeight, DiscordNodeWeight, OceanNFT, ProofOf
 from ...util.nft import Weight, OceanNFT
@@ -119,8 +119,21 @@ def generate_voters(round, current_timestep):
     voters.append(voter)
   return voters
 
-def accounting(curator:Curator, voters:List[Voter])
-
+def accounting(curator:Curator, voters:List[Voter]) -> List[Voter]:
+  accounted_voters = []
+  dverdicts = dict(curator.audits)
+  for voter in voters:
+    dvotes = dict(voter.votes)
+    matches = [(dverdicts[k], dvotes[k])  for k in dverdicts.keys()&dvotes.keys()]
+    for match in matches:
+      status = match[0]
+      tokens = match[1]
+      if status == Verdict.DELIVERED:
+        voter.winTokens(tokens * 0.1)
+      else:
+        voter.slashTokens(tokens * status.value * 0.01)
+    accounted_voters.append(voter)
+  return accounted_voters
 
 # +
 # Whales, Dolphin, Fish, Shrimp are adopted from Ocean pictures in Ocean Port, but generalised "size"

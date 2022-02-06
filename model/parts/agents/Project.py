@@ -110,6 +110,9 @@ class Project(Weight):
     def addMilestone(self, milestone):
         self.milestones.append(milestone)
 
+    def removeMilestones(self):
+        self.milestones = [] 
+
     def generateMilestones(self, timestep):
         team_size = len(self.team_members)
         print(team_size)

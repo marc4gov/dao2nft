@@ -57,7 +57,7 @@ class Wallet:
                 self._OCEAN = amt #avoid floating point roundoff
         if amt > self._OCEAN:
             amt = round(amt, 12)
-        if amt > self._USD:
+        if amt > self._OCEAN:
             raise ValueError("OCEAN withdraw amount (%s) exceeds holdings (%s)"
                              % (amt, self._OCEAN))
         self._OCEAN -= amt

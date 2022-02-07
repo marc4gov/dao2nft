@@ -11,8 +11,8 @@ class Voter(Weight):
         self.wallet = wallet
         self.votes:List[Tuple] = []
 
-    def addVote(self, round, project_name, amount):
-        self.votes.append((round, project_name, amount))
+    def addVote(self, project_name, amount):
+        self.votes.append((project_name, amount))
 
     def winTokens(self, amount):
         self.wallet.depositOCEAN(amount)

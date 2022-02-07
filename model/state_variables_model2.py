@@ -15,9 +15,9 @@ dao_graph.add_node('Round 1')
 # weights = probabilities(126, 1.0, 0.6, 4_012_000)
 projects = {}
 
-voters = generate_voters(1, 0)
-projects_weights, total_stakeholders, total_votes = generate_project_weights(13)
-for name, weight in projects_weights.items():
+project_weights, total_stakeholders, total_votes = generate_project_weights(13)
+voters = generate_voters(1, 0, project_weights)
+for name, weight in project_weights.items():
     project = generate_project(name, weight, 0, math.floor(200_000 * weight))
     projects[name] = project
     dao_graph.add_node(name)

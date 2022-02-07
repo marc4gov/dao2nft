@@ -3,6 +3,8 @@ from .util.wallet import Wallet
 from .util.sourcecred.contribution import TaskType
 from typing import List
 from enum import Enum
+import functools
+import operator
 
 class TeamMemberType(Enum):
     PROJECT_LEAD = 1
@@ -11,18 +13,28 @@ class TeamMemberType(Enum):
     COMMUNITY_LEAD = 4
     DESIGNER = 5
 
-class TeamMember(Weight):
+class TeamMember():
     def __init__(self, name: str, team_member_type:TeamMemberType, weight: float, timestep: int):
-        super().__init__(weight, timestep)
+        self.weights = [Weight(weight, timestep)]
+        self.current_weight = 0
         self.name = name
         self.type = team_member_type
+
+    def reduceWeights(self, current_timestep):
+        decayed_weigths = []
+        for i in range(len(self.weights)):
+            self.weights[i].decay(current_timestep)
+            new_weight = self.weights[i].weight
+            decayed_weigths.append(new_weight)
+        self.current_weight = functools.reduce(operator.add, decayed_weigths)
 
     def __str__(self) -> str:
         s = []
         s += ["\nTeamMember={\n"]
         s += ['name=%s' % self.name]
         s += ['; type=%s' % self.type]
-        s += ['; weight=%s' % self.weight]
+        s += ['; current_weight=%s' % self.current_weight]
+        s += ['; weights=%s' % ",".join(map(str, self.weights))]
         s += [" \n/TeamMember}"]
         return "".join(s)
 
@@ -115,7 +127,6 @@ class Project(Weight):
 
     def generateMilestones(self, timestep):
         team_size = len(self.team_members)
-        print(team_size)
         for i in range(team_size-1):
             milestone = Milestone(i+1, timestep)
             milestone.generateTasks(i+1, timestep)

@@ -37,7 +37,6 @@ def projects_policy(params, step, sH, s):
     dao_graph:nx.DiGraph = s['dao_graph']
     projects:Dict[str, Project] = s['projects']
     roles = params['roles']
-    stakeholders = s['stakeholders']
     round = s['round']
 
     # new Grants round each month
@@ -49,8 +48,8 @@ def projects_policy(params, step, sH, s):
       # recurring means how many projects will continue for the next round
       recurring = random.choice(params['recurring_factor'])
       # print("Recurring: ", recurring)
-      recurring_factor = math.floor(recurring * len(project_weights))
-      recurring_project_names = random.sample(projects.keys(), recurring_factor)
+      recurring_factor = math.floor(recurring * len(projects))
+      recurring_project_names = random.sample(list(projects), recurring_factor)
       recurring_projects_total_weight = 0
       recurring_projects = {}
       for name in recurring_project_names:
@@ -58,8 +57,12 @@ def projects_policy(params, step, sH, s):
         recurring_projects_total_weight += projects[name].weight
       # new entrant selection
       new_factor = math.floor((1-recurring) * len(project_weights))
-      new_entrants = random.sample(project_weights, new_factor)
-      new_entrants_total_weight = sum(new_entrants.values())
+      new_entrants_names = random.sample(list(project_weights), new_factor)
+      new_entrants_total_weight = 0
+      new_entrants = {}
+      for name in new_entrants_names:
+        new_entrants[name] = project_weights[name]
+        new_entrants_total_weight += project_weights[name]
       # weights are offset because of random selections
       missing_weight = 1 - (recurring_projects_total_weight + new_entrants_total_weight)
       total_new_entrants = len(new_entrants) if len(new_entrants) > 0 else 1
@@ -71,11 +74,10 @@ def projects_policy(params, step, sH, s):
         team = generate_project(name, new_weight, current_timestep, math.floor(total_votes * weight))
         new_entrants[name] = team
         dao_graph.add_node(name)
-        dao_graph.add_edge('Round ' + str(round), name, weight=weight + missing_weight_per_project)
+        dao_graph.add_edge('Round ' + str(round), name)
       # adjust weights per project in recurring projects
       for project_name, team in recurring_projects.items():
-        dao_graph.nodes[project_name]['weight'] += missing_weight_per_project
-        dao_graph.add_edge('Round ' + str(round), project_name, weight=dao_graph.nodes[project_name]['weight'])
+        dao_graph.add_edge('Round ' + str(round), project_name)
 
       # merge the new entrants and the recurring projects
       projects = {**recurring_projects, **new_entrants}
@@ -100,20 +102,21 @@ def projects_policy(params, step, sH, s):
       for milestone in project.milestones:
         if abs(current_timestep - milestone.planned) <= 2:
           # do a bend coin flip to determine if a milestone is reached
-          reached = random.choice([True, False, False, False])
+          reached = random.choice([True, True, True, False])
           if reached:
             milestone.actual = current_timestep
             milestone.delivered = True
         milestones.append(milestone)
       projects[project_name].milestones = milestones
-          
-      for member, weights in project.team_members.items():
-        # do an action per team member (in 80% of the time) or nothing (in 20% of the time)
+      members = []
+      for member in project.team_members:
+        # do an action per team member (in 75% of the time) or nothing (in 25% of the time)
         new_weight = random.choice([do_discord_action(), do_github_action(), do_contribution_action(), 0])
         if new_weight > 0:
-          team[name].append(Weight(new_weight, current_timestep))
-          dao_graph.nodes[name]['weight'] = reduce_weigths(team[name], current_timestep)
-      projects[project_name] = team
+          member.weights.append(Weight(new_weight, current_timestep))
+        members.append(member)
+      project.team_members = members
+      projects[project_name] = project
 
     return ({
       'projects': projects,
@@ -147,14 +150,14 @@ def values_policy(params, step, sH, s):
     # every day we assess the projects on NFT status and adjust the project properties and vote signal accordingly
     projects = s['projects']
     nft_earners = 0
-    for name, team in projects.items():
-        if name in nft.keys():
-          nft_old = nft[name]
+    for project_name, project in projects.items():
+        if project_name in nft.keys():
+          nft_old = nft[project_name]
         else:
           nft_old = OceanNFT.SHRIMP
-        team_weight = get_team_weight(team, current_timestep)
-        nft[name] = mint_nft(team_weight)
-        if nft[name].value > nft_old.value:
+        team_weight = get_team_weight(project.team_members, current_timestep)
+        nft[project_name] = mint_nft(team_weight)
+        if nft[project_name].value > nft_old.value:
           nft_earners += 1
     
     # if many projects score NFTs, yes votes will go up
@@ -196,12 +199,12 @@ def curation_policy(params, step, sH, s):
     timestep_per_month = 30
 
     curator:Curator = s['curator']
-    projects:List[Project] = s['projects']
+    projects = s['projects']
 
     # per week or per new Grants round
     if (current_timestep % timestep_per_week) == 0 or (current_timestep % timestep_per_month) == 0:
-      for project in projects:
-        (delayed, delivered, in_progress, finished) = curateProject(project)
+      for project in projects.values():
+        (delayed, delivered, in_progress, finished) = curateProject(project, current_timestep)
         if not finished:
           if delayed >= 0 and delayed < 3:
             curator.addAudit(project.name, Verdict.DELAYED)
@@ -218,10 +221,10 @@ def curation_policy(params, step, sH, s):
 
       return({'curator': curator})
 
-    for project in projects:
-      (delayed, delivered, in_progress, finished) = curateProject(project)
+    for project_name, project in projects.items():
+      (delayed, delivered, in_progress, finished) = curateProject(project, current_timestep)
       if finished:
-        curator.addAudit(project.name, Verdict.DELIVERED)
+        curator.addAudit(project_name, Verdict.DELIVERED)
     
     return({'curator': curator})
 
@@ -234,27 +237,34 @@ def participation_policy(params, step, sH, s):
     timestep_per_day = 1
     timestep_per_month = 30
 
+    voters = s['voters']
+    total_votes = get_total_votes(voters)
+    curator = s['curator']
     # new Grants round
     if (current_timestep % timestep_per_month) == 0:
-      if s['voters'] >= s['dao_members']:
+      #do accounting
+      voters = accounting(curator, voters)
+      total_votes_accounted = get_total_votes(voters)
+      ratio = total_votes_accounted/total_votes
+      if total_votes_accounted >= total_votes:
         return ({
-          'voters': s['voters'],
-          'dao_members': s['voters']
+          'voters': voters,
+          'dao_members': math.floor(s['dao_members'] + ratio * len(voters))
         })
       else:
         return ({
-          'voters': s['voters'],
-          'dao_members': math.floor(s['dao_members'] - 0.1 * s['voters'])
+          'voters': voters,
+          'dao_members': math.floor(s['dao_members'] - ratio * len(voters))
         })
 
-    projects = len(s['projects'])
-    unsound_projects = s['unsound_projects'] if s['unsound_projects'] > 0 else 1
-    valuable_projects = s['valuable_projects'] if s['valuable_projects'] > 0 else 1
-    projects = projects if projects > 0 else 1
-    value_ratio = (valuable_projects - unsound_projects) / projects
-    voters = math.floor((1 + value_ratio) * s['voters'])
+    # projects = len(s['projects'])
+    # unsound_projects = s['unsound_projects'] if s['unsound_projects'] > 0 else 1
+    # valuable_projects = s['valuable_projects'] if s['valuable_projects'] > 0 else 1
+    # projects = projects if projects > 0 else 1
+    # value_ratio = (valuable_projects - unsound_projects) / projects
+    # voters = math.floor((1 + value_ratio) * s['voters'])
     return ({
-      'voters': voters,
+      'voters': s['voters'],
       'dao_members': s['dao_members']
     })
 
@@ -296,3 +306,6 @@ def update_round(params, step, sH, s, _input):
 
 def update_nft(params, step, sH, s, _input):
   return ('nft', _input['nft'])
+
+def update_curator(params, step, sH, s, _input):
+  return ('curator', _input['curator'])

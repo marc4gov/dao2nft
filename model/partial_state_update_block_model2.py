@@ -34,7 +34,7 @@ partial_state_update_block = [
         },
         'variables': {
             'projects': update_projects,
-            'voters': update_voters,
+            'curator': update_curator,
             'round': update_round
         }
     }

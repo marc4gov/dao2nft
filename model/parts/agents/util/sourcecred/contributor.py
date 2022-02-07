@@ -100,7 +100,7 @@ def curateProject(project:Project, current_timestep):
     finished = True
   return (delayed, delivered, in_progress, finished)
 
-def generate_voters(round, current_timestep):
+def generate_voters(round, current_timestep, project_weights):
   voters = []
   round_stats = round11_stats
   if round % 3 == 0:
@@ -112,12 +112,16 @@ def generate_voters(round, current_timestep):
   sigma = round_stats['max_votes']/round_stats['total_votes'] # purely Marc inspiration. Can probably be regression modelled if one wants more detail
   size = math.floor(round_stats['total_votes']/1000)
   probs = probabilities(voter_number, mean, sigma, size)
-
   for weight in probs:
     votes = weight * round_stats['total_votes']
+    sorted_project_weights = dict(sorted(project_weights.items(), key=lambda item: item[1]))
     voter = Voter('Voter ' + names.get_first_name(), weight, current_timestep, Wallet(0, votes))
+    for name, project_weight in sorted_project_weights.items():
+      voter.addVote(name, project_weight * votes)
     voters.append(voter)
   return voters
+
+
 
 def accounting(curator:Curator, voters:List[Voter]) -> List[Voter]:
   accounted_voters = []
@@ -129,8 +133,10 @@ def accounting(curator:Curator, voters:List[Voter]) -> List[Voter]:
       status = match[0]
       tokens = match[1]
       if status == Verdict.DELIVERED:
+        print("Voter wins: ", voter.name, tokens * 0.1)
         voter.winTokens(tokens * 0.1)
       else:
+        # print("Voter loses: ", voter.name, tokens * status.value * 0.01)
         voter.slashTokens(tokens * status.value * 0.01)
     accounted_voters.append(voter)
   return accounted_voters
@@ -233,30 +239,8 @@ def mint_nft(cred):
   return OceanNFT.SHRIMP
   
 
-# def decay_function(cred):
-#   if cred < 10:
-#     return 1
-#   if cred > 10:
-#     return (1-1/(0.1 * cred + 2))
-#   if cred > 100:
-#     return (1-1/(0.01 * cred + 5))
-#   if cred > 1000:
-#     return (1-1/(0.001 * cred + 5))
-#   return 1
-
 def pay_out(votes, project_weight, stakeholder_weight, constant):
   return (stakeholder_weight/project_weight) * votes * constant
-
-# half_life = [0.5**i for i in range(50)]
-# def decay(initial_timestep, current_timestep, decay_list = half_life):
-#   time_passed = current_timestep - initial_timestep
-#   if time_passed % 7 == 0:
-#     return decay_list[math.floor(time_passed/7)]
-#   else:
-#     return 1
-
-# def decayed_weight(weight:tuple, current_timestep):
-#   return weight[0] * decay(weight[1], current_timestep)
 
 def reduce_weigths(weights:List[Weight], current_timestep):
   decayed_weigths = []
@@ -266,22 +250,25 @@ def reduce_weigths(weights:List[Weight], current_timestep):
     decayed_weigths.append(new_weight)
   return functools.reduce(operator.add, decayed_weigths)
 
-def get_team_weight(team, current_timestep):
+def get_team_weight(members:List[TeamMember], current_timestep):
   total = 0
-  for name, weights in team.items():
-    cred = reduce_weigths(weights, current_timestep)
-    if 'Project Lead' in name:
+  for member in members:
+    member.reduceWeights(current_timestep)
+    cred = member.current_weight
+    if 'Project Lead' in member.name:
       total += cred * 2
     else:
-      if 'Lead' in name:
+      if 'Lead' in member.name:
         total += cred * 1.5
       else:
         total += cred
   return total
 
-# def assess_project(team, funds_requested):
-#   weight = get_team_weight(team)
-#   return weight * funds_requested * 0.1
+def get_total_votes(voters:List[Voter]):
+  tokens = 0
+  for i in range(len(voters)):
+    tokens += voters[i].wallet.OCEAN()
+  return tokens
 
 def do_discord_action():
   return random.choice(list(DiscordEdgeWeight))

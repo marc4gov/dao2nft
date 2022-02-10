@@ -81,8 +81,8 @@ class Milestone:
             self.tasks.append(Task(TaskType.CODE, 0.01, current_timestep + 25, [TeamMemberType.ENGINEER]))
             return
         
-        self.tasks.append(Task(TaskType.MARKET, 0.01, current_timestep + 30, [TeamMemberType.COMMUNITY_LEAD]))
-        self.tasks.append(Task(TaskType.CODE, 0.01, current_timestep + 30, [TeamMemberType.ENGINEER]))
+        self.tasks.append(Task(TaskType.MARKET, 0.01, current_timestep + 27, [TeamMemberType.COMMUNITY_LEAD]))
+        self.tasks.append(Task(TaskType.CODE, 0.01, current_timestep + 27, [TeamMemberType.ENGINEER]))
 
 
     def __str__(self) -> str:
@@ -122,8 +122,8 @@ class Project(Weight):
     def addMilestone(self, milestone):
         self.milestones.append(milestone)
 
-    def removeMilestones(self):
-        self.milestones = [] 
+    def reset(self):
+        self.milestones = []
 
     def generateMilestones(self, timestep):
         team_size = len(self.team_members)

@@ -13,8 +13,8 @@ import random
 import names
 import functools
 import operator
-from typing import List
-
+from typing import List, Dict
+from copy import deepcopy
 
 # +
 # Here we mimic the size of the ecosystem per round 11-13. Each month a new round. We loop each round.
@@ -83,6 +83,37 @@ def append_team_weights(team: dict, cred, current_timestep):
     team[name].append(Weight(cred, current_timestep))
   return team
 
+def reset_project_milestones(projects:List[Dict[str, Project]], current_timestep, new_weight):
+  reset_projects = deepcopy(projects)
+  for name, project in reset_projects.items():
+    project.weight += new_weight
+    project.milestones = []
+    reset_projects[name] = project.generateMilestones(current_timestep)
+  return reset_projects
+
+def check_milestones(milestones, current_timestep):
+  milestones_cecked = []
+  for milestone in milestones:
+    total = len(milestone.tasks)
+    tasks_delivered = 0
+    for task in milestone.tasks:
+      if task.delivered:
+        tasks_delivered += 1
+      else:
+        if abs(current_timestep - task.planned) <= 1:
+          # do a coin flip to determine if a task is completed
+          completed = random.choice([True, False])
+          if completed:
+            task.actual = current_timestep
+            task.delivered = True
+            tasks_delivered += 1
+      if tasks_delivered == total:
+        milestone.actual = current_timestep
+        milestone.delivered = True
+    milestones_cecked.append(milestone)
+  return milestones_cecked
+
+
 def curateProject(project:Project, current_timestep):
   milestones = project.milestones
   delayed = 0
@@ -90,8 +121,8 @@ def curateProject(project:Project, current_timestep):
   in_progress = 0
   finished = False
   for m in milestones:
-    if m.planned < current_timestep:
-      delayed += current_timestep - m.planned
+    if m.actual > current_timestep:
+      delayed += current_timestep - m.actual
     elif m.actual <= current_timestep and m.actual > 0:
       delivered += 1
     else:
@@ -136,8 +167,8 @@ def accounting(curator:Curator, voters:List[Voter]) -> List[Voter]:
         print("Voter wins: ", voter.name, tokens * 0.1)
         voter.winTokens(tokens * 0.1)
       else:
-        # print("Voter loses: ", voter.name, tokens * status.value * 0.01)
-        voter.slashTokens(tokens * status.value * 0.01)
+        print("Voter loses: ", voter.name, tokens * status.value * 0.05)
+        voter.slashTokens(tokens * status.value * 0.05)
     accounted_voters.append(voter)
   return accounted_voters
 

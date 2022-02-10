@@ -8,34 +8,38 @@ Here the partial state update blocks are configurated by setting
 for each state update block individually
 """
 from .parts.polimechs.model2 import *
+from .parts.polimechs.accounting_policy import *
+
 
 partial_state_update_block = [
     {
         'policies': {
             'grants_policy': grants_policy,
             'values_policy': values_policy,
-            'participation_policy': participation_policy,
         },
         'variables': {
             'grant_cap': update_grants,
-            'valuable_projects': update_valuable_projects,
-            'unsound_projects': update_unsound_projects,
             'yes_votes': update_yes_votes,
             'no_votes': update_no_votes,
-            'voters': update_voters,
-            'dao_members': update_dao_members,
             'nft': update_nft,
         },
     },
     {
         'policies': {
+            'accounting_policy': accounting_policy,
+        },
+        'variables': {
+            'voters': update_voters,
+        }
+    },
+    {
+        'policies': {
             'projects_policy': projects_policy,
-            'curation_policy': curation_policy,
         },
         'variables': {
             'projects': update_projects,
-            'curator': update_curator,
             'round': update_round
         }
-    }
+    },
+
 ]

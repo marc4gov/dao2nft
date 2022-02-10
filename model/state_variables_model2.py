@@ -34,6 +34,5 @@ genesis_state = {
     'unsound_projects': 0,
     'dao_graph': dao_graph,
     'nft': {},
-    'curator': Curator('Curator OCEANDao', 1, 0, Wallet(0, 10000)),
     'round': 1
 }

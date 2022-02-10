@@ -47,7 +47,7 @@ def projects_policy(params, step, sH, s):
       
       # recurring means how many projects will continue for the next round
       recurring = random.choice(params['recurring_factor'])
-      # print("Recurring: ", recurring)
+      print("Recurring: ", recurring)
       recurring_factor = math.floor(recurring * len(projects))
       recurring_project_names = random.sample(list(projects), recurring_factor)
       recurring_projects_total_weight = 0
@@ -55,6 +55,8 @@ def projects_policy(params, step, sH, s):
       for name in recurring_project_names:
         recurring_projects[name] = projects[name]
         recurring_projects_total_weight += projects[name].weight
+        # print(recurring_projects[name])
+
       # new entrant selection
       new_factor = math.floor((1-recurring) * len(project_weights))
       new_entrants_names = random.sample(list(project_weights), new_factor)
@@ -75,10 +77,13 @@ def projects_policy(params, step, sH, s):
         new_entrants[name] = team
         dao_graph.add_node(name)
         dao_graph.add_edge('Round ' + str(round), name)
-      # adjust weights per project in recurring projects
-      for project_name, team in recurring_projects.items():
-        dao_graph.add_edge('Round ' + str(round), project_name)
-
+      # adjust weights and milestones per project in recurring projects
+      for name, project in recurring_projects.items():
+        project.weight += missing_weight_per_project
+        project.reset()
+        project.generateMilestones(current_timestep)
+        recurring_projects[name] = project
+        
       # merge the new entrants and the recurring projects
       projects = {**recurring_projects, **new_entrants}
 
@@ -94,20 +99,11 @@ def projects_policy(params, step, sH, s):
         # check milestones progress
         pass
 
-
     # actions in projects by day
     for project_name, project in projects.items():
       milestones = []
-      # check milestones progress
-      for milestone in project.milestones:
-        if abs(current_timestep - milestone.planned) <= 2:
-          # do a bend coin flip to determine if a milestone is reached
-          reached = random.choice([True, True, True, False])
-          if reached:
-            milestone.actual = current_timestep
-            milestone.delivered = True
-        milestones.append(milestone)
-      projects[project_name].milestones = milestones
+      # check milestones & tasks in progress
+      projects[project_name].milestones = check_milestones(projects[project_name].milestones, current_timestep)
       members = []
       for member in project.team_members:
         # do an action per team member (in 75% of the time) or nothing (in 25% of the time)
@@ -140,8 +136,6 @@ def values_policy(params, step, sH, s):
     # start with 80% of last round's votes
     if (current_timestep % timestep_per_month) == 0:
       return ({
-          'valuable_projects': 0,
-          'unsound_projects': 0,
           'yes_votes': yes_votes,
           'no_votes': no_votes,
           'nft': nft
@@ -169,104 +163,14 @@ def values_policy(params, step, sH, s):
     else:
       yes_votes = (1 - (nft_earn_ratio * nft_earn_ratio)) * yes_votes
       no_votes = (1 + (nft_earn_ratio * nft_earn_ratio)) * no_votes
-
-    # ugly hack - need to change
-    valuable = math.floor(random.choice(params['dataset_ratio']) * len(projects))
-    valuable_increment = 1
-    if valuable <= s['valuable_projects'] and s['valuable_projects'] > 0:
-      valuable_increment = -1
-    unsound_increment = 1
-    unsound = math.floor(random.choice(params['unsound_ratio']) * len(projects))
-    if unsound <= s['unsound_projects'] and s['unsound_projects'] > 0:
-      unsound_increment = -1  
     
     return ({
-        'valuable_projects': s['valuable_projects'] + valuable_increment,
-        'unsound_projects': s['unsound_projects'] + unsound_increment,
+
         'yes_votes': yes_votes,
         'no_votes': no_votes,
         'nft': nft
     })
 
-
-def curation_policy(params, step, sH, s):
-    """
-    Update the curation state.
-    """
-    current_timestep = len(sH)
-    timestep_per_day = 1
-    timestep_per_week = 7
-    timestep_per_month = 30
-
-    curator:Curator = s['curator']
-    projects = s['projects']
-
-    # per week or per new Grants round
-    if (current_timestep % timestep_per_week) == 0 or (current_timestep % timestep_per_month) == 0:
-      for project in projects.values():
-        (delayed, delivered, in_progress, finished) = curateProject(project, current_timestep)
-        if not finished:
-          if delayed >= 0 and delayed < 3:
-            curator.addAudit(project.name, Verdict.DELAYED)
-          if delayed >= 3 and delayed < 7:
-            curator.addAudit(project.name, Verdict.MILESTONES_NOT_MET)
-          if delayed >= 7 and delayed < 14:
-            curator.addAudit(project.name, Verdict.FAILED)
-          if delayed >= 14 and delayed < 21:
-            curator.addAudit(project.name, Verdict.ADVERSARY)
-          else:
-            curator.addAudit(project.name, Verdict.RUGPULL)
-        else:
-          curator.addAudit(project.name, Verdict.DELIVERED)
-
-      return({'curator': curator})
-
-    for project_name, project in projects.items():
-      (delayed, delivered, in_progress, finished) = curateProject(project, current_timestep)
-      if finished:
-        curator.addAudit(project_name, Verdict.DELIVERED)
-    
-    return({'curator': curator})
-
-
-def participation_policy(params, step, sH, s):
-    """
-    Update the participation state.
-    """
-    current_timestep = len(sH)
-    timestep_per_day = 1
-    timestep_per_month = 30
-
-    voters = s['voters']
-    total_votes = get_total_votes(voters)
-    curator = s['curator']
-    # new Grants round
-    if (current_timestep % timestep_per_month) == 0:
-      #do accounting
-      voters = accounting(curator, voters)
-      total_votes_accounted = get_total_votes(voters)
-      ratio = total_votes_accounted/total_votes
-      if total_votes_accounted >= total_votes:
-        return ({
-          'voters': voters,
-          'dao_members': math.floor(s['dao_members'] + ratio * len(voters))
-        })
-      else:
-        return ({
-          'voters': voters,
-          'dao_members': math.floor(s['dao_members'] - ratio * len(voters))
-        })
-
-    # projects = len(s['projects'])
-    # unsound_projects = s['unsound_projects'] if s['unsound_projects'] > 0 else 1
-    # valuable_projects = s['valuable_projects'] if s['valuable_projects'] > 0 else 1
-    # projects = projects if projects > 0 else 1
-    # value_ratio = (valuable_projects - unsound_projects) / projects
-    # voters = math.floor((1 + value_ratio) * s['voters'])
-    return ({
-      'voters': s['voters'],
-      'dao_members': s['dao_members']
-    })
 
 
 # state update functions

@@ -133,37 +133,36 @@ def values_policy(params, step, sH, s):
     weight_rate = s['weight_rate']
 
     # new Grants round
-    # start with 80% of last round's votes
     if (current_timestep % timestep_per_month) == 0:
+      projects = s['projects']
+      nft_earners = 0
+      # if many projects score NFTs, yes votes will go up
+      total_projects = len(projects) if len(projects) > 0 else 1
+      nft_earn_ratio = nft_earners/total_projects
+      if (nft_earn_ratio > 0.2):
+        yes_votes = (1 + (nft_earn_ratio * nft_earn_ratio)) * yes_votes
+        no_votes = (1 - (nft_earn_ratio * nft_earn_ratio)) * no_votes
+      else:
+        yes_votes = (1 - (nft_earn_ratio * nft_earn_ratio)) * yes_votes
+        no_votes = (1 + (nft_earn_ratio * nft_earn_ratio)) * no_votes
       return ({
-          'weight_rate': weight_rate,
+          'weight_rate': {},
           'yes_votes': yes_votes,
           'no_votes': no_votes,
           'nft': nft
       })
 
     # every day we assess the projects on NFT status and adjust the project properties and vote signal accordingly
-    projects = s['projects']
-    nft_earners = 0
     for project_name, project in projects.items():
         if project_name in nft.keys():
-          nft_old = nft[project_name]
+          nft_old = nft[project_name][0]
+          old_weight = nft[project_name][1]
         else:
           nft_old = OceanNFT.SHRIMP
+          old_weight = 0
         team_weight = get_team_weight(project.team_members, current_timestep)
-        nft[project_name] = mint_nft(team_weight)
-        if nft[project_name].value > nft_old.value:
-          nft_earners += 1
-    
-    # if many projects score NFTs, yes votes will go up
-    total_projects = len(projects) if len(projects) > 0 else 1
-    nft_earn_ratio = nft_earners/total_projects
-    if (nft_earn_ratio > 0.2):
-      yes_votes = (1 + (nft_earn_ratio * nft_earn_ratio)) * yes_votes
-      no_votes = (1 - (nft_earn_ratio * nft_earn_ratio)) * no_votes
-    else:
-      yes_votes = (1 - (nft_earn_ratio * nft_earn_ratio)) * yes_votes
-      no_votes = (1 + (nft_earn_ratio * nft_earn_ratio)) * no_votes
+        weight_rate[project_name] = team_weight - old_weight
+        nft[project_name] = (mint_nft(team_weight), team_weight)
     
     return ({
         'weight_rate': weight_rate,

@@ -21,6 +21,7 @@ partial_state_update_block = [
             'grant_cap': update_grants,
             'yes_votes': update_yes_votes,
             'no_votes': update_no_votes,
+            'weight_rate': update_weight_rate,
             'nft': update_nft,
         },
     },
@@ -30,6 +31,7 @@ partial_state_update_block = [
         },
         'variables': {
             'voters': update_voters,
+            'dao_members': update_dao_members
         }
     },
     {

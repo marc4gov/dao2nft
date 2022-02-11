@@ -64,7 +64,7 @@ def generate_team_members(weight, current_timestep):
   return team_members
 
 # +
-# Ref article the distribution of activities should mimic a graph to visualize what happens round by round.
+# Ref article the distribution of activities should mimick a graph to visualize what happens round by round.
 # Graph is easy to use to accumulate weights on edges and total value each stakeholder/member accumulates.
 # Sourcecred is a complex markow chain, for simulation purposes we try to design simple.
 # outcome is a project graph, mimicking sourcecred
@@ -117,24 +117,6 @@ def check_milestones(milestones, current_timestep):
     milestones_cecked.append(milestone)
   return milestones_cecked
 
-# if need to curate here is the curate function
-
-def curateProject(project:Project, current_timestep):
-  milestones = project.milestones
-  delayed = 0
-  delivered = 0
-  in_progress = 0
-  finished = False
-  for m in milestones:
-    if m.actual > current_timestep:
-      delayed += current_timestep - m.actual
-    elif m.actual <= current_timestep and m.actual > 0:
-      delivered += 1
-    else:
-      in_progress += 1
-  if delivered == len(milestones):
-    finished = True
-  return (delayed, delivered, in_progress, finished)
 
 def generate_voters(round, current_timestep, project_weights):
   voters = []
@@ -156,32 +138,6 @@ def generate_voters(round, current_timestep, project_weights):
       voter.addVote(name, project_weight * votes)
     voters.append(voter)
   return voters
-
-
-# here the curation is updated based on curators' verdict similar quantifying praise in TEC. 
-# Tuple list with project name and verdict and then matched to projects that were voted upon via python list comprehension
-# if verdict is losing the effect is here - a rugpull is then 5x being late per curate function and accounting policy in polimech
-# here we could potentially add an exponential slashing/reward policy to adjust exponentially, need to understand how 
-# such a function  affects voting in next round if we choose to do this
-
-
-def accounting(curator:Curator, voters:List[Voter]) -> List[Voter]:
-  accounted_voters = []
-  dverdicts = dict(curator.audits)
-  for voter in voters:
-    dvotes = dict(voter.votes)
-    matches = [(dverdicts[k], dvotes[k])  for k in dverdicts.keys()&dvotes.keys()]
-    for match in matches:
-      status = match[0]
-      tokens = match[1]
-      if status == Verdict.DELIVERED:
-        print("Voter wins: ", voter.name, tokens * 0.1)
-        voter.winTokens(tokens * 0.1)
-      else:
-        print("Voter loses: ", voter.name, tokens * status.value * 0.05)
-        voter.slashTokens(tokens * status.value * 0.05)
-    accounted_voters.append(voter)
-  return accounted_voters
 
 # +
 # Whales, Dolphin, Fish, Shrimp are adopted from Ocean pictures in Ocean Port, but generalised "size"

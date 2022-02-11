@@ -34,5 +34,6 @@ genesis_state = {
     'unsound_projects': 0,
     'dao_graph': dao_graph,
     'nft': {},
+    'weight_rate': [],
     'round': 1
 }

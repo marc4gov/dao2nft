@@ -36,7 +36,6 @@ def projects_policy(params, step, sH, s):
 
     dao_graph:nx.DiGraph = s['dao_graph']
     projects:Dict[str, Project] = s['projects']
-    roles = params['roles']
     round = s['round']
 
     # new Grants round each month
@@ -131,11 +130,13 @@ def values_policy(params, step, sH, s):
     nft = s['nft']
     yes_votes = s['yes_votes']
     no_votes = s['no_votes']
+    weight_rate = s['weight_rate']
 
     # new Grants round
     # start with 80% of last round's votes
     if (current_timestep % timestep_per_month) == 0:
       return ({
+          'weight_rate': weight_rate,
           'yes_votes': yes_votes,
           'no_votes': no_votes,
           'nft': nft
@@ -165,7 +166,7 @@ def values_policy(params, step, sH, s):
       no_votes = (1 + (nft_earn_ratio * nft_earn_ratio)) * no_votes
     
     return ({
-
+        'weight_rate': weight_rate,
         'yes_votes': yes_votes,
         'no_votes': no_votes,
         'nft': nft
@@ -192,6 +193,9 @@ def update_valuable_projects(params, step, sH, s, _input):
 
 def update_unsound_projects(params, step, sH, s, _input):
   return ('unsound_projects', _input['unsound_projects'])
+
+def update_weight_rate(params, step, sH, s, _input):
+  return ('weight_rate', _input['weight_rate'])
 
 def update_yes_votes(params, step, sH, s, _input):
   return ('yes_votes', _input['yes_votes'])

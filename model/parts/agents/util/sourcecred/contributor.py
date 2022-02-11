@@ -1,3 +1,5 @@
+# Changed a lot to object oriented approach and agents class
+
 from model.parts.agents.Curator import Curator, Verdict
 from .oceanrounds import round11_stats, round12_stats, round13_stats, probabilities
 from .contribution import Contribution, TaskType, GithubEdgeWeight, GithubNodeWeight, DiscordEdgeWeight, DiscordNodeWeight, OceanNFT, ProofOf
@@ -91,6 +93,8 @@ def reset_project_milestones(projects:List[Dict[str, Project]], current_timestep
     reset_projects[name] = project.generateMilestones(current_timestep)
   return reset_projects
 
+# checking the work, here simulating with a coinflip due to lack of data
+
 def check_milestones(milestones, current_timestep):
   milestones_cecked = []
   for milestone in milestones:
@@ -113,6 +117,7 @@ def check_milestones(milestones, current_timestep):
     milestones_cecked.append(milestone)
   return milestones_cecked
 
+# if need to curate here is the curate function
 
 def curateProject(project:Project, current_timestep):
   milestones = project.milestones
@@ -152,6 +157,12 @@ def generate_voters(round, current_timestep, project_weights):
     voters.append(voter)
   return voters
 
+
+# here the curation is updated based on curators' verdict similar quantifying praise in TEC. 
+# Tuple list with project name and verdict and then matched to projects that were voted upon via python list comprehension
+# if verdict is losing the effect is here - a rugpull is then 5x being late per curate function and accounting policy in polimech
+# here we could potentially add an exponential slashing/reward policy to adjust exponentially, need to understand how 
+# such a function  affects voting in next round if we choose to do this
 
 
 def accounting(curator:Curator, voters:List[Voter]) -> List[Voter]:

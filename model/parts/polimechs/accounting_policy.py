@@ -18,7 +18,10 @@ def accounting_policy(params, step, sH, s):
     # per new Grants round
     if (current_timestep % timestep_per_month) == 0:
 
-      # bring out the Curator!
+      # bring out the Curator! Every month curator reviews projects whether milestones are met. 
+    # Tracking from curate update function. Adversary is someone going againts value of ecosystem, "rugpull" 
+    # is someone just taking tokens and running away and never hear from them
+    
       curator = Curator('Curator OCEANDao', 1, 0)
       for project in projects.values():
         (delayed, delivered, in_progress, finished) = curateProject(project, current_timestep)

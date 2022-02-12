@@ -86,7 +86,7 @@ def accounting_policy(params, step, sH, s):
             curator.addAudit(project.name, Verdict.RUGPULL)
         else:
           curator.addAudit(project.name, Verdict.DELIVERED)
-      print(curator)
+      # print(curator)
       #do accounting
       voters = accounting(curator, voters)
       total_votes_accounted = get_total_votes(voters)

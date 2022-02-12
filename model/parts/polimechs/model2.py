@@ -45,7 +45,8 @@ def projects_policy(params, step, sH, s):
       project_weights, total_stakeholders, total_votes = generate_project_weights(round)
       
       # recurring means how many projects will continue for the next round
-      recurring = random.choice(params['recurring_factor'])
+      # recurring = params['recurring_factor']
+      recurring = 0.5
       print("Recurring: ", recurring)
       recurring_factor = math.floor(recurring * len(projects))
       recurring_project_names = random.sample(list(projects), recurring_factor)
@@ -131,20 +132,26 @@ def values_policy(params, step, sH, s):
     yes_votes = s['yes_votes']
     no_votes = s['no_votes']
     weight_rate = s['weight_rate']
+    projects = s['projects']
 
     # new Grants round
     if (current_timestep % timestep_per_month) == 0:
-      projects = s['projects']
-      nft_earners = 0
-      # if many projects score NFTs, yes votes will go up
-      total_projects = len(projects) if len(projects) > 0 else 1
-      nft_earn_ratio = nft_earners/total_projects
-      if (nft_earn_ratio > 0.2):
-        yes_votes = (1 + (nft_earn_ratio * nft_earn_ratio)) * yes_votes
-        no_votes = (1 - (nft_earn_ratio * nft_earn_ratio)) * no_votes
+      nft_sorted = sorted(nft.values(), key=lambda x: x[1], reverse=True)
+      total = len(nft_sorted) if len(nft_sorted) > 0 else 1
+      nft_values = [v[1] for v in nft_sorted]
+      avg = sum(nft_values)/total
+      nft_performer = 0
+      # if many projects have weights above avg, yes votes will go up
+      for weight in nft_values:
+        if weight > avg:
+          nft_performer += 1
+      nft_earn_ratio = nft_performer/total
+      if (nft_earn_ratio > params['performer_ratio']):
+        yes_votes = (1 + (nft_earn_ratio ** 2)) * yes_votes
+        no_votes = (1 - (nft_earn_ratio ** 2)) * no_votes
       else:
-        yes_votes = (1 - (nft_earn_ratio * nft_earn_ratio)) * yes_votes
-        no_votes = (1 + (nft_earn_ratio * nft_earn_ratio)) * no_votes
+        yes_votes = (1 - (nft_earn_ratio ** 2)) * yes_votes
+        no_votes = (1 + (nft_earn_ratio ** 2)) * no_votes
       return ({
           'weight_rate': {},
           'yes_votes': yes_votes,

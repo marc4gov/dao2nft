@@ -17,6 +17,7 @@ import functools
 import operator
 from typing import List, Dict
 from copy import deepcopy
+import numpy as np
 
 # +
 # Here we mimic the size of the ecosystem per round 11-13. Each month a new round. We loop each round.
@@ -95,7 +96,7 @@ def reset_project_milestones(projects:List[Dict[str, Project]], current_timestep
 
 # checking the work, here simulating with a coinflip due to lack of data
 
-def check_milestones(milestones, current_timestep):
+def check_milestones(milestones:List[Milestone], current_timestep):
   milestones_cecked = []
   for milestone in milestones:
     total = len(milestone.tasks)
@@ -106,8 +107,8 @@ def check_milestones(milestones, current_timestep):
       else:
         if abs(current_timestep - task.planned) <= 1:
           # do a coin flip to determine if a task is completed
-          completed = random.choice([True, False])
-          if completed:
+          completed = np.random.uniform()
+          if completed > 0.5:
             task.actual = current_timestep
             task.delivered = True
             tasks_delivered += 1

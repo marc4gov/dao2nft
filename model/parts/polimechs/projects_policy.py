@@ -88,8 +88,8 @@ def projects_policy(params, step, sH, s):
       projects[project_name].milestones = check_milestones(projects[project_name].milestones, current_timestep)
       members = []
       for member in project.team_members:
-        # do an action per team member (in 75% of the time) or nothing (in 25% of the time)
-        new_weight = random.choice([do_discord_action(), do_github_action(), do_contribution_action(), 0])
+        # do an action per team member (in 50% of the time) or nothing (in 50% of the time)
+        new_weight = random.choice([do_discord_action(), do_github_action(), do_contribution_action(), 0, 0, 0])
         if new_weight > 0:
           member.weights.append(Weight(new_weight, current_timestep))
           member.reduceWeights(current_timestep)

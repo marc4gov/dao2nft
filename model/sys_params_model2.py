@@ -9,5 +9,5 @@ params = {
     # 'slashing_factor': [[0.1, 0.2, 0.3]],
     # 'win_factor': [[0.1, 0.2, 0.3]],
     # 'recurring_factor': [0.4, 0.5],
-    'performer_ratio': [0.4, 0.45, 0.5]
+    'performer_ratio': [0.35, 0.4, 0.45, 0.5]
 }

@@ -4,12 +4,12 @@ Model initial state.
 
 import networkx as nx
 import math
-from model.parts.agents.util.sourcecred.contributor import probabilities, generate_voters, generate_project, generate_project_weights
+from model.parts.agents.util.sourcecred.contributor import expand_graph, generate_voters, generate_project, generate_project_weights
 from .sys_params_model2 import params
 from model.parts.agents.Curator import Curator
 from model.parts.agents.util.wallet import Wallet
 
-dao_graph = nx.DiGraph()
+dao_graph = nx.Graph()
 dao_graph.add_node('Round 1')
 
 # weights = probabilities(126, 1.0, 0.6, 4_012_000)
@@ -22,6 +22,8 @@ for name, weight in project_weights.items():
     projects[name] = project
     dao_graph.add_node(name)
     dao_graph.add_edge('Round 1', name, weight=weight)
+
+dao_graph = expand_graph(dao_graph, projects)
 
 genesis_state = {
     'dao_members': 100,

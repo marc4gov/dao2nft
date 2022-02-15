@@ -176,7 +176,7 @@ def select_entities(amount, entities):
 # Weight is currently linear, no quadratic voting or other fancy stuff
 
 def generate_stakeholder_graph(projects, stakeholder_size, total_votes):
-  graph = nx.DiGraph()
+  graph = nx.Graph()
   weights = probabilities(stakeholder_size, 1.0, random.choice([0.3, 0.4, 0.5, 0.6]), total_votes)
   
   stakeholders = generate_stakeholders(weights)
@@ -196,6 +196,20 @@ def generate_stakeholder_graph(projects, stakeholder_size, total_votes):
     for name, weight in stakers.items():
       graph.add_node(name)
       graph.add_edge(name, project_name, weight=weight)
+  return graph
+
+def expand_graph(graph:nx.Graph, projects:Dict[str,Project]):
+  for name, project in projects.items():
+    graph.add_node(name)
+    for member in project.team_members:
+      graph.add_node(member.name)
+      graph.add_edge(project.name, member.name, weight=member.current_weight)
+  return graph
+
+def change_graph(graph:nx.Graph, project:Project):
+  for member in project.team_members:
+    graph.nodes[member.name]['weight'] = member.current_weight
+    graph[project.name][member.name]['weight'] = member.current_weight
   return graph
 
 def reach_milestone(milestone_nr, weight):

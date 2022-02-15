@@ -9,6 +9,7 @@ for each state update block individually
 """
 from .parts.polimechs.model2 import *
 from .parts.polimechs.accounting_policy import *
+from .parts.polimechs.projects_policy import *
 
 
 partial_state_update_block = [
@@ -40,7 +41,8 @@ partial_state_update_block = [
         },
         'variables': {
             'projects': update_projects,
-            'round': update_round
+            'round': update_round,
+            'dao_graph': update_dao_graph
         }
     },
 

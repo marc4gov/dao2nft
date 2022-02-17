@@ -3,22 +3,6 @@ import math
 from model.parts.agents.util.sourcecred.contributor import get_team_weight, mint_nft, OceanNFT
 from typing import List, Dict
 
-def grants_policy(params, step, sH, s):
-    """
-    Update the grants state.
-    """
-    current_timestep = len(sH)
-    timestep_per_day = 1
-    timestep_per_month = 30
-
-    # adjust the grant CAP according to the amount of valuable projects in this round
-    if (current_timestep % timestep_per_month) == 0:
-      total_projects = len(s['projects']) if len(s['projects']) > 0 else 1
-      value_ratio = (s['valuable_projects'] - s['unsound_projects']) / total_projects
-      return ({'grant_cap': math.floor((1 + value_ratio) * s['grant_cap'])})
-
-    return ({'grant_cap': s['grant_cap'] })
-
 
 def values_policy(params, step, sH, s):
     """
@@ -36,7 +20,7 @@ def values_policy(params, step, sH, s):
     projects = s['projects']
 
     # new Grants round
-    if (current_timestep % timestep_per_midweek) == 0:
+    if (current_timestep % timestep_per_week) == 0:
       nft_sorted = sorted(nft.values(), key=lambda x: x[1], reverse=True)
       total = len(nft_sorted) if len(nft_sorted) > 0 else 1
       nft_values = [v[1] for v in nft_sorted]
@@ -47,6 +31,7 @@ def values_policy(params, step, sH, s):
         if weight > avg:
           nft_performer += 1
       nft_earn_ratio = nft_performer/total
+      # the performance level is driver for yes or no votes, assuming linear to the square of the ratio
       if (nft_earn_ratio > params['performer_ratio']):
         yes_votes = (1 + (nft_earn_ratio ** 2)) * yes_votes
         no_votes = (1 - (nft_earn_ratio ** 2)) * no_votes
@@ -60,7 +45,7 @@ def values_policy(params, step, sH, s):
           'nft': nft
       })
 
-    # every day we assess the projects on NFT status and adjust the project properties and vote signal accordingly
+    # every day we assess the projects on accumulated weights and adjust the project properties accordingly
     for project_name, project in projects.items():
         if project_name in nft.keys():
           nft_old = nft[project_name][0]
@@ -80,8 +65,7 @@ def values_policy(params, step, sH, s):
     })
 
 
-
-# state update functions
+# boilerplate state update functions
 
 def update_grants(params, step, sH, s, _input):
   return ('grant_cap', _input['grant_cap'])

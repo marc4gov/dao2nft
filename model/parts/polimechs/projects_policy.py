@@ -1,4 +1,4 @@
-from model.parts.agents.util.sourcecred.contributor import generate_project_weights, check_milestones, generate_project, change_graph, expand_graph, do_contribution_action, do_discord_action, do_github_action
+from model.parts.agents.util.sourcecred.contributor import generate_project_weights, check_milestones, generate_project, change_graph, expand_graph, do_contribution_action, do_discord_action, do_github_action, get_team_weight
 from model.parts.agents.Project import Project
 from model.parts.agents.util.nft import Weight
 from typing import List, Dict
@@ -94,8 +94,9 @@ def projects_policy(params, step, sH, s):
           member.weights.append(Weight(new_weight, current_timestep))
           member.reduceWeights(current_timestep)
         members.append(member)
+      new_project_weight = get_team_weight(members, current_timestep)
       project.team_members = members
-      project
+      project.weight = new_project_weight
       projects[project_name] = project
       dao_graph = change_graph(dao_graph, project)
       dao_graph.nodes[project_name]['weight'] = project.weight

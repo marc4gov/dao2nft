@@ -1,9 +1,11 @@
-from model.parts.agents.util.sourcecred.contributor import get_total_votes, check_milestones
+from model.parts.agents.util.wallet import Wallet
+
 from model.parts.agents.Curator import Curator, Verdict
 from model.parts.agents.Project import Project
 from model.parts.agents.Voter import Voter
 from typing import List
-
+import numpy as np
+import names
 
 import math
 
@@ -37,7 +39,7 @@ def accounting(curator:Curator, voters:List[Voter]) -> List[Voter]:
   dverdicts = dict(curator.audits)
   for voter in voters:
     dvotes = dict(voter.votes)
-    matches = [(dverdicts[k], dvotes[k])  for k in dverdicts.keys()&dvotes.keys()]
+    matches = [(dverdicts[k], dvotes[k])  for k in dverdicts.keys() & dvotes.keys()]
     for match in matches:
       status = match[0]
       tokens = match[1]
@@ -58,17 +60,17 @@ def accounting_policy(params, step, sH, s):
     timestep_per_day = 1
     timestep_per_month = 30
 
-    voters = s['voters']
-    total_votes = get_total_votes(voters)
+    voters:List[Voter] = s['voters']
     dao_members = s['dao_members']
     projects = s['projects']
 
+    accounted_voters:List[Voter] = []
     # per new Grants round
     if (current_timestep % timestep_per_month) == 0:
 
       # bring out the Curator! Every month curator reviews projects whether milestones are met. 
-    # Tracking from curate update function. Adversary is someone going againts value of ecosystem, "rugpull" 
-    # is someone just taking tokens and running away and never hear from them
+      # Tracking from curate update function. Adversary is someone going againts value of ecosystem, "rugpull" 
+      # is someone just taking tokens and running away and never hear from them
     
       curator = Curator('Curator OCEANDao', 1, 0)
       for project in projects.values():
@@ -86,12 +88,39 @@ def accounting_policy(params, step, sH, s):
             curator.addAudit(project.name, Verdict.RUGPULL)
         else:
           curator.addAudit(project.name, Verdict.DELIVERED)
-      # print(curator)
-      #do accounting
-      voters = accounting(curator, voters)
-      total_votes_accounted = get_total_votes(voters)
-      ratio = total_votes_accounted/total_votes
-      dao_members *= (1 + ratio)
+
+      # do accounting based on the curator's verdicts
+      accounted_voters = accounting(curator, voters)
+
+      for voter in accounted_voters:
+        prev_voter = next((x for x in voters if x.name == voter.name), None)
+        if prev_voter:
+          prev_wallet = prev_voter.wallet.OCEAN() if prev_voter.wallet.OCEAN() > 0 else 1
+        else:
+          prev_wallet = 1
+        # ratio of win or losses determines if voters leave or DAO member being attracted to vote
+        ratio = (voter.wallet.OCEAN() - prev_wallet)/prev_wallet
+
+        flip = np.random.uniform()
+        # positive ratio will result in increase of voters in 90% of the time
+        if ratio > 0:
+          if flip > 0.9:
+            accounted_voters.remove(voter)
+          else:
+            accounted_voters.append(Voter('Voter ' + names.get_first_name(), 0.1, current_timestep, Wallet(0, 200)))
+        # negative ratio will result in decrease of voters in 70% of the time
+        else:
+          if flip > 0.3:
+            accounted_voters.remove(voter)
+          else:
+            accounted_voters.append(Voter('Voter ' + names.get_first_name(), 0.1, current_timestep, Wallet(0, 200)))
+      # increase the community
+      diff = len(accounted_voters) - len(voters)
+      dao_members += diff
+      return ({
+        'voters': accounted_voters,
+        'dao_members' : dao_members
+      })
 
     return ({
       'voters': voters,

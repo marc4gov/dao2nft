@@ -7,19 +7,17 @@ Here the partial state update blocks are configurated by setting
 
 for each state update block individually
 """
-from .parts.polimechs.model2 import *
-from .parts.polimechs.accounting_policy import *
-from .parts.polimechs.projects_policy import *
-
+from model.parts.polimechs.values_policy import *
+from model.parts.polimechs.accounting_policy import *
+from model.parts.polimechs.projects_policy import *
+from model.parts.polimechs.update_state import *
 
 partial_state_update_block = [
     {
         'policies': {
-            'grants_policy': grants_policy,
             'values_policy': values_policy,
         },
         'variables': {
-            'grant_cap': update_grants,
             'yes_votes': update_yes_votes,
             'no_votes': update_no_votes,
             'weight_rate': update_weight_rate,

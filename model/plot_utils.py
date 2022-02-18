@@ -2,6 +2,24 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+import numpy as np
+
+def reverse_sigmoid(x):
+    z = np.exp(x)
+    sig = 2 / (1 + z)
+    return sig
+
+def decay_plot():
+  x = np.arange(0,60)
+  y = reverse_sigmoid(0.1 * x)
+  plt.figure(figsize=(10,6))
+  plt.xlabel('Days')
+  plt.ylabel('Weight')
+  plt.plot(x,y,label="Decay")
+  plt.legend()
+  plt.title('Partial Sigmoid function for decay in weights')
+
+
 
 def monte_carlo_plot(dfs, column):
   fig, ax = plt.subplots()

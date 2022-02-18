@@ -2,6 +2,7 @@ import math
 
 from model.parts.agents.util.sourcecred.contributor import get_team_weight, mint_nft, OceanNFT
 from typing import List, Dict
+from model.parts.agents.Project import Project
 
 # this policy should align with the values of the DAO ecosystem or community
 # basic drivers are the actions occurring in projects or what team members actually do on a day-to-day basis
@@ -22,7 +23,7 @@ def values_policy(params, step, sH, s):
     yes_votes = s['yes_votes']
     no_votes = s['no_votes']
     weight_rate = s['weight_rate']
-    projects = s['projects']
+    projects: Dict[str, Project] = s['projects']
 
     # new Grants round
     if (current_timestep % timestep_per_week) == 0:
@@ -52,15 +53,16 @@ def values_policy(params, step, sH, s):
 
     # every day we assess the projects on accumulated weights and adjust the project properties accordingly
     for project_name, project in projects.items():
-        if project_name in nft.keys():
-          nft_old = nft[project_name][0]
-          old_weight = nft[project_name][1]
-        else:
-          nft_old = OceanNFT.SHRIMP
-          old_weight = 0
-        team_weight = get_team_weight(project.team_members, current_timestep)
-        weight_rate[project_name] = team_weight - old_weight
-        nft[project_name] = (mint_nft(team_weight), team_weight)
+        for member in project.team_members:
+          if not member.name in nft.keys():
+            nft[member.name] = (OceanNFT.SHRIMP, 0)
+          member.reduceWeights(current_timestep)
+          nft[member.name] = (mint_nft(member.current_weight), member.current_weight)
+        if not project_name in nft.keys():
+            nft[project_name] = (OceanNFT.SHRIMP, 0)
+        project.reduceWeights(current_timestep)
+        weight_rate[project_name] = project.current_weight - nft[project_name][1]
+        nft[project_name] = (mint_nft(project.current_weight), project.current_weight)
     
     return ({
         'weight_rate': weight_rate,

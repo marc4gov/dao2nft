@@ -1,4 +1,4 @@
-from model.parts.agents.util.sourcecred.contributor import generate_project_weights, check_milestones, generate_project, change_graph, expand_graph, do_contribution_action, do_discord_action, do_github_action, get_team_weight
+from model.parts.agents.util.sourcecred.contributor import generate_project_weights, check_milestones, project_finished, generate_project, change_graph, expand_graph, do_contribution_action, do_discord_action, do_github_action, get_team_weight, reach_finish
 from model.parts.agents.Project import Project
 from model.parts.agents.util.nft import Weight
 from typing import List, Dict
@@ -33,10 +33,10 @@ def projects_policy(params, step, sH, s):
       recurring_factor = math.floor(recurring * len(projects))
       recurring_project_names = random.sample(list(projects), recurring_factor)
       recurring_projects_total_weight = 0
-      recurring_projects = {}
+      recurring_projects: Dict[str, Project] = {}
       for name in recurring_project_names:
         recurring_projects[name] = projects[name]
-        recurring_projects_total_weight += projects[name].weight
+        recurring_projects_total_weight += projects[name].current_weight
         # print(recurring_projects[name])
 
       # new entrant selection
@@ -61,7 +61,8 @@ def projects_policy(params, step, sH, s):
         dao_graph.add_edge('Round ' + str(round), name)
       # adjust weights and milestones per project in recurring projects
       for name, project in recurring_projects.items():
-        project.weight += missing_weight_per_project
+        project.weights.append(Weight(missing_weight_per_project, current_timestep))
+        project.reduceWeights(current_timestep)
         project.reset()
         project.generateMilestones(current_timestep)
         recurring_projects[name] = project
@@ -75,17 +76,21 @@ def projects_policy(params, step, sH, s):
           'round': round
       })
 
-    # actions in projects by week
+    # assess end state of projects by week
     if (current_timestep % timestep_per_week) == 0:
       for project in projects.values():
-        # check milestones progress
-        pass
+        if project_finished(project.milestones):
+          project.weights.append(Weight(reach_finish(0.05, 2), current_timestep))
+          project.finished = True
 
     # actions in projects by day
     for project_name, project in projects.items():
       milestones = []
       # check milestones & tasks in progress
-      projects[project_name].milestones = check_milestones(projects[project_name].milestones, current_timestep)
+      if not project.finished:
+        (milestones, weight) = check_milestones(projects[project_name].milestones, current_timestep)
+        project.weights.append(Weight(weight, current_timestep))
+        project.milestones = milestones
       members = []
       for member in project.team_members:
         # do an action per team member (in 50% of the time) or nothing (in 50% of the time)
@@ -94,12 +99,14 @@ def projects_policy(params, step, sH, s):
           member.weights.append(Weight(new_weight, current_timestep))
           member.reduceWeights(current_timestep)
         members.append(member)
-      new_project_weight = get_team_weight(members, current_timestep)
+      team_project_weight = get_team_weight(members, current_timestep)
+      # let the team actions account for 10% contribution to the project weight
+      project.weights.append(Weight(team_project_weight * 0.1, current_timestep))
       project.team_members = members
-      project.weight = new_project_weight
       projects[project_name] = project
+      project.reduceWeights(current_timestep)
       dao_graph = change_graph(dao_graph, project)
-      dao_graph.nodes[project_name]['weight'] = project.weight
+      dao_graph.nodes[project_name]['weight'] = project.current_weight
 
     return ({
       'projects': projects,

@@ -1,5 +1,3 @@
-from .strutil import asCurrency
-
 class Wallet:
     """A Wallet holds balances of USD and OCEAN for a given Agent.
     """
@@ -69,9 +67,9 @@ class Wallet:
     def __str__(self) -> str:
         s = []
         s += ["\nWallet={\n"]
-        s += ['USD=%s' % asCurrency(self.USD())]
+        s += ['USD=%s' % self.USD()]
         s += ['; OCEAN=%.6f' % self.OCEAN()]
-        s += ['; total_USD_in=%s' % asCurrency(self.totalUSDin())]
+        s += ['; total_USD_in=%s' % self.totalUSDin()]
         s += ['; total_OCEAN_in=%.6f' % self.totalOCEANin()]
         s += [" \n/Wallet}"]
         return "".join(s)

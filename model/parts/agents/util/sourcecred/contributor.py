@@ -15,7 +15,7 @@ import random
 import names
 import functools
 import operator
-from typing import List, Dict
+from typing import List, Dict, Tuple
 from copy import deepcopy
 import numpy as np
 
@@ -94,29 +94,56 @@ def reset_project_milestones(projects:List[Dict[str, Project]], current_timestep
     reset_projects[name] = project.generateMilestones(current_timestep)
   return reset_projects
 
-# checking the work, here simulating with a coinflip due to lack of data
+def reach_milestone(milestone_nr, factor):
+  return (milestone_nr * factor)
 
-def check_milestones(milestones:List[Milestone], current_timestep):
+def reach_finish(weight, factor):
+  return (factor * weight)
+
+def check_task(task:Task, current_timestep) -> Tuple[Task, float]:
+  overshoot = current_timestep - task.planned
+  weight = 0
+  # do a coin flip to determine if a task is completed
+  completed = np.random.uniform()
+  if abs(overshoot) <= 1:
+    if completed > 0.5:
+      task.actual = current_timestep
+      task.delivered = True
+      weight += task.weight
+  if (overshoot > 2):
+    weight -= 0.5 * task.weight
+  if (overshoot > 4):
+    weight -= task.weight
+  return (task, weight)
+
+def check_milestones(milestones:List[Milestone], current_timestep) -> Tuple[List[Milestone], float]:
   milestones_cecked = []
   for milestone in milestones:
     total = len(milestone.tasks)
     tasks_delivered = 0
+    weight = 0
     for task in milestone.tasks:
       if task.delivered:
         tasks_delivered += 1
       else:
-        if abs(current_timestep - task.planned) <= 1:
-          # do a coin flip to determine if a task is completed
-          completed = np.random.uniform()
-          if completed > 0.5:
-            task.actual = current_timestep
-            task.delivered = True
-            tasks_delivered += 1
+        task, task_weight = check_task(task, current_timestep)
+        weight += task_weight
+        if task.delivered: tasks_delivered += 1 
       if tasks_delivered == total:
         milestone.actual = current_timestep
         milestone.delivered = True
+        weight += reach_milestone(milestone.number, 0.5)
     milestones_cecked.append(milestone)
-  return milestones_cecked
+  return (milestones_cecked, weight)
+
+def project_finished(milestones:List[Milestone]):
+    total = 0
+    for milestone in milestones:
+      if milestone.delivered: total += 1
+    if total == len(milestones):
+      return True
+    else:
+      return False
 
 
 def generate_voters(round, current_timestep, project_weights):
@@ -222,32 +249,32 @@ def reach_roi(weight, factor):
 def finish_project(weight, factor):
   return (factor * weight)
 
-def check_last_milestone(milestones):
-  # print("Milestones: ", milestones)
-  for k, v in milestones.items():
-    if k == 'Milestone1' and v == False: return 0
-    if k == 'Milestone2' and v == False: return 1
-    if k == 'Milestone3' and v == False: return 2
-    if k == 'Milestone4' and v == False: return 3
-    if k == 'Milestone4' and v == True: return 4
-  return 0
+# def check_last_milestone(milestones):
+#   # print("Milestones: ", milestones)
+#   for k, v in milestones.items():
+#     if k == 'Milestone1' and v == False: return 0
+#     if k == 'Milestone2' and v == False: return 1
+#     if k == 'Milestone3' and v == False: return 2
+#     if k == 'Milestone4' and v == False: return 3
+#     if k == 'Milestone4' and v == True: return 4
+#   return 0
 
 def mint_nft(cred):
-  if cred > 0 and cred < 10:
+  if cred > 0 and cred < 0.5:
     return OceanNFT.SHRIMP
-  if cred > 10 and cred < 20:
+  if cred > 0.5 and cred < 1.0:
     return OceanNFT.OYSTER
-  if cred > 20 and cred < 50:
+  if cred > 1.0 and cred < 2.0:
     return OceanNFT.FISH
-  if cred > 50 and cred < 100:
+  if cred > 2.0 and cred < 3.0:
     return OceanNFT.DOLPHIN
-  if cred > 100 and cred < 200:
+  if cred > 3.0 and cred < 5.0:
     return OceanNFT.FISHERMAN
-  if cred > 200 and cred < 500:
+  if cred > 5.0 and cred < 10.0:
     return OceanNFT.MANTA
-  if cred > 500 and cred < 1000:
+  if cred > 10 and cred < 50:
     return OceanNFT.OCEAN
-  if cred > 1000:
+  if cred > 50:
     return OceanNFT.ATLANTIS
   return OceanNFT.SHRIMP
   

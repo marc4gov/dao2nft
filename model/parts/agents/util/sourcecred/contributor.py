@@ -230,7 +230,7 @@ def expand_graph(graph:nx.Graph, projects:Dict[str,Project]):
   for name, project in projects.items():
     graph.add_node(name)
     for member in project.team_members:
-      graph.add_node(member.name)
+      graph.add_node(member.name, weight=member.current_weight, type='team member')
       graph.add_edge(project.name, member.name, weight=member.current_weight)
   return graph
 

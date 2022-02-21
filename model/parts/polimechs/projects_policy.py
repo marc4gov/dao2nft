@@ -52,7 +52,7 @@ def projects_policy(params, step, sH, s):
       for name, weight in new_entrants.items():
         team = generate_project(name, weight, current_timestep, math.floor(total_votes * weight))
         new_entrants[name] = team
-        dao_graph.add_node(name)
+        dao_graph.add_node(name, weight=weight, type='project')
         dao_graph.add_edge('Round ' + str(round), name)
       # adjust weights and milestones per project in recurring projects
       for name, project in recurring_projects.items():

@@ -20,7 +20,7 @@ voters = generate_voters(1, 0, project_weights)
 for name, weight in project_weights.items():
     project = generate_project(name, weight, 0, math.floor(200_000 * weight))
     projects[name] = project
-    dao_graph.add_node(name)
+    dao_graph.add_node(name, weight=weight, type='project')
     dao_graph.add_edge('Round 1', name, weight=weight)
 
 dao_graph = expand_graph(dao_graph, projects)

@@ -32,12 +32,9 @@ def projects_policy(params, step, sH, s):
       # print("Recurring: ", recurring)
       recurring_factor = math.floor(recurring * len(projects))
       recurring_project_names = random.sample(list(projects), recurring_factor)
-      recurring_projects_total_weight = 0
       recurring_projects: Dict[str, Project] = {}
       for name in recurring_project_names:
         recurring_projects[name] = projects[name]
-        recurring_projects_total_weight += projects[name].current_weight
-        # print(recurring_projects[name])
 
       # new entrant selection
       new_factor = math.floor((1-recurring) * len(project_weights))
@@ -47,21 +44,19 @@ def projects_policy(params, step, sH, s):
       for name in new_entrants_names:
         new_entrants[name] = project_weights[name]
         new_entrants_total_weight += project_weights[name]
-      # weights are offset because of random selections
-      missing_weight = 1 - (recurring_projects_total_weight + new_entrants_total_weight)
-      total_new_entrants = len(new_entrants) if len(new_entrants) > 0 else 1
+      # weights are offset because of random selections and recurring projects
+      missing_weight = 1 - new_entrants_total_weight
       total_recurring_projects = len(recurring_projects) if len(recurring_projects) > 0 else 1
-      missing_weight_per_project = missing_weight/(total_new_entrants + total_recurring_projects)
+      missing_weight_per_recurring_project = missing_weight/total_recurring_projects
       # init the new entrants
       for name, weight in new_entrants.items():
-        new_weight = weight + missing_weight_per_project
-        team = generate_project(name, new_weight, current_timestep, math.floor(total_votes * weight))
+        team = generate_project(name, weight, current_timestep, math.floor(total_votes * weight))
         new_entrants[name] = team
         dao_graph.add_node(name)
         dao_graph.add_edge('Round ' + str(round), name)
       # adjust weights and milestones per project in recurring projects
       for name, project in recurring_projects.items():
-        project.weights.append(Weight(missing_weight_per_project, current_timestep))
+        project.weights.append(Weight(missing_weight_per_recurring_project, current_timestep))
         project.reduceWeights(current_timestep)
         project.reset()
         project.generateMilestones(current_timestep)

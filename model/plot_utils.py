@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
+import copy
 import numpy as np
 
 def reverse_sigmoid(x):
@@ -19,6 +19,36 @@ def decay_plot():
   plt.legend()
   plt.title('Partial Sigmoid function for decay in weights')
 
+
+def project_dfs(df, rounds, subsets=1):
+  dfps = [[copy.deepcopy(pd.DataFrame) for x in range(1)] for y in range(10)]
+  for i in range(rounds):
+      for j in range(subsets):
+        dx = df[(df["round"] == i+1) & (df["subset"] == j)]
+        dx.reset_index(drop=True, inplace=True)
+        dfps[i][j] = dx['projects'].apply(pd.Series)
+        dfps[i][j].rename(columns=lambda x: x.split(" ")[1], inplace=True)
+        s = dfps[i][j].shape
+        for k in range(s[0]):
+          for m in range(s[1]):
+            dfps[i][j].loc[k][m] = dfps[i][j].loc[k][m].current_weight
+  return dfps
+
+def project_plot(df, rounds, subsets=1):
+  dfps = project_dfs(df, rounds, subsets)
+  x = [ dfps[i][j].shape for i in range(rounds) for j in range(subsets)]
+  max(x)[1]
+  for i in range(rounds):
+      for j in range(subsets):
+        diff = max(x)[1] - dfps[i][j].shape[1]
+        for k in range(diff):
+          dfps[i][j].insert(len(dfps[i][j].columns),'zeros ' + str(k+1), [0.0 for m in range(30)])
+  fig, axes = plt.subplots(nrows=max(x)[1],ncols=rounds,figsize=(20,60))
+  for i in range(10):
+      flag = True
+      for j in range(1):
+        if j > 0: flag = False
+        dfps[i][j].plot.line(ax = axes[:,i], subplots=True, legend=flag)
 
 
 def monte_carlo_plot(dfs, column):

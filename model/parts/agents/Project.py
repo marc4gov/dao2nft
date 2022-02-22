@@ -26,7 +26,7 @@ class TeamMember():
         decayed_weigths = []
         for i in range(len(self.weights)):
             self.weights[i].decay(current_timestep)
-            new_weight = self.weights[i].weight
+            new_weight = self.weights[i].current_weight
             decayed_weigths.append(new_weight)
         self.current_weight = functools.reduce(operator.add, decayed_weigths)
 
@@ -53,7 +53,7 @@ class Task(Weight):
         s = []
         s += ["\nTask={\n"]
         s += ['name=%s' % self.taskType]
-        s += ['; weight=%s' % self.weight]
+        s += ['; weight=%s' % self.initial_weight]
         s += ['; workers=%s' % ",".join(map(str, self.workers))]
         s += ['; planned=%s' % self.planned]
         s += ['; actual=%s' % self.actual]
@@ -115,7 +115,7 @@ class Project():
         decayed_weigths = []
         for i in range(len(self.weights)):
             self.weights[i].decay(current_timestep)
-            new_weight = self.weights[i].weight
+            new_weight = self.weights[i].current_weight
             decayed_weigths.append(new_weight)
         self.current_weight = functools.reduce(operator.add, decayed_weigths)
 

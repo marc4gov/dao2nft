@@ -24,7 +24,7 @@ class Voter(Weight):
         s = []
         s += ["\nVoter={\n"]
         s += ['name=%s' % self.name]
-        s += ['; weight=%s' % self.weight]
+        s += ['; weight=%s' % self.current_weight]
         s += ['; wallet=%s' % self.wallet]
         s += ['; votes=%s' % ",".join(map(str, self.votes))]
         s += ["\n/Voter}"]

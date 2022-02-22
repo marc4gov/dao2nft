@@ -109,11 +109,11 @@ def check_task(task:Task, current_timestep) -> Tuple[Task, float]:
     if completed > 0.5:
       task.actual = current_timestep
       task.delivered = True
-      weight += task.weight
+      weight += task.initial_weight
   if (overshoot > 2):
-    weight -= 0.5 * task.weight
+    weight -= 0.5 * task.initial_weight
   if (overshoot > 4):
-    weight -= task.weight
+    weight -= task.initial_weight
   return (task, weight)
 
 def check_milestones(milestones:List[Milestone], current_timestep) -> Tuple[List[Milestone], float]:
@@ -162,6 +162,7 @@ def generate_voters(round, current_timestep, project_weights):
     votes = weight * round_stats['total_votes']
     sorted_project_weights = dict(sorted(project_weights.items(), key=lambda item: item[1]))
     voter = Voter('Voter ' + names.get_first_name(), weight, current_timestep, Wallet(0, votes))
+    voter.current_weight = weight
     for name, project_weight in sorted_project_weights.items():
       voter.addVote(name, project_weight * votes)
     voters.append(voter)

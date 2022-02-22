@@ -35,7 +35,7 @@ def arrange_projects(p1: pd.DataFrame, p2: pd.DataFrame):
   return(p2)
 
 def project_dfs(df, rounds, subsets=1):
-  dfps = [[copy.deepcopy(pd.DataFrame) for x in range(1)] for y in range(10)]
+  dfps = [[copy.deepcopy(pd.DataFrame) for x in range(subsets)] for y in range(rounds)]
   for i in range(rounds):
     for j in range(subsets):
       dx = df[(df["round"] == i+1) & (df["subset"] == j)]
@@ -60,11 +60,10 @@ def project_plot(df, rounds, subsets=1):
         for k in range(diff):
           dfps[i][j].insert(len(dfps[i][j].columns),'zeros ' + str(k+1), [0.0 for m in range(30)])
   fig, axes = plt.subplots(nrows=max(x)[1],ncols=rounds,figsize=(20,60))
-  for i in range(10):
+  for i in range(rounds):
       flag = True
-      for j in range(1):
-        if j > 0: flag = False
-        dfps[i][j].plot.line(ax = axes[:,i], subplots=True, legend=flag)
+      for j in range(subsets):
+        dfps[i][j].plot.line(ax = axes[:,i], subplots=True, legend=True)
 
 
 

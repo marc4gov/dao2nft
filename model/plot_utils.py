@@ -71,13 +71,14 @@ def voter_dfs(df, rounds, subsets=1):
   for i in range(rounds):
     for j in range(subsets):
       dx = df[(df["round"] == i+1) & (df["subset"] == j)]
-      dfps[i][j] = dx['projects'].apply(pd.Series)
-      dfps[i][j].rename(columns=lambda x: x.split(" ")[1], inplace=True)
-      if i > 0:
-        dfps[i][j] = arrange_projects(dfps[i-1][j], dfps[i][j])
+      dfps[i][j] = dx['voters'].apply(pd.Series)
+      dfps[i][j].dropna(axis='columns', inplace=True)
       dfps[i][j].reset_index(drop=True, inplace=True)
       s = dfps[i][j].shape
       for k in range(s[0]):
         for m in range(s[1]):
-          dfps[i][j].loc[k][m] = dfps[i][j].loc[k][m].current_weight
+          if k == 0:
+            dfps[i][j].append(dfps[i][j].loc[k][m].name)
+          if dfps[i][j].loc[k][m] != 0:
+            dfps[i][j].loc[k][m] = dfps[i][j].loc[k][m].wallet.OCEAN()
   return dfps
